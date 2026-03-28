@@ -11,6 +11,14 @@ import {
 
 export const apiRouter = Router();
 
+/** Проверка: откройте в браузере /api/version — должны быть актуальные имена из mock.ts */
+apiRouter.get("/version", (_req, res) => {
+  res.json({
+    app: "elektronnyj-dnevnik",
+    pupils: getChildren().map((c) => ({ id: c.id, name: c.name })),
+  });
+});
+
 apiRouter.get("/children", (_req, res) => {
   res.json({ children: getChildren() });
 });
