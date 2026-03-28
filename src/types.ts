@@ -1,0 +1,81 @@
+export interface Child {
+  id: string;
+  name: string;
+  classLabel: string;
+}
+
+export interface LessonBlock {
+  key: string;
+  label: string;
+  text: string;
+}
+
+export interface DiaryLesson {
+  id: string;
+  order: number;
+  title: string;
+  timeLabel: string;
+  grade?: number | null;
+  teacher?: string;
+  topic?: string;
+  homework?: string;
+  controlWork?: string | null;
+  place?: string;
+  homeworkNext?: string;
+  blocks?: LessonBlock[];
+}
+
+export interface DiaryDay {
+  date: string;
+  weekday: string;
+  monthGenitive: string;
+  year: number;
+  lessons: DiaryLesson[];
+}
+
+export interface PerformanceRow {
+  subjectId: string;
+  subjectName: string;
+  studentAvg: number;
+  classAvg: number;
+  parallelAvg: number;
+}
+
+export interface PerformancePayload {
+  trimesterLabel: string;
+  dateLabel: string;
+  dayNum: number;
+  weekday: string;
+  monthGenitive: string;
+  year: number;
+  rows: PerformanceRow[];
+}
+
+export interface GradeDaySummary {
+  date: string;
+  dateDisplay: string;
+  grades: number[];
+}
+
+export interface GradeDayDetail {
+  date: string;
+  dateDisplay: string;
+  items: {
+    subject: string;
+    activity: string;
+    grade: number;
+  }[];
+}
+
+export interface FinalRow {
+  subject: string;
+  t1?: number | null;
+  t2?: number | null;
+  t3?: number | null;
+  year?: number | null;
+}
+
+export interface FinalsPayload {
+  yearLabel: string;
+  rows: FinalRow[];
+}
