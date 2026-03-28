@@ -1,9 +1,8 @@
 {
-  "buildCommand": "npm run build",
   "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
   "functions": {
     "api/index.ts": {
-      "includeFiles": "{public,dist}/**"
+      "includeFiles": "public/**"
     }
   }
 }
