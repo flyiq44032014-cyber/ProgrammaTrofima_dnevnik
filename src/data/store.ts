@@ -1,8 +1,14 @@
+import type { Child } from "../types";
 import * as mem from "./mock";
 import * as db from "../db/repository";
 
 function useDb(): boolean {
   return Boolean(process.env.DATABASE_URL);
+}
+
+/** Записи с classScheduleId — демо «класс как ребёнок» для расписания учителя; в списке выбора у родителя не показываем. */
+export function childrenForParentPicker(list: Child[]): Child[] {
+  return list.filter((c) => !c.classScheduleId);
 }
 
 export async function getChildren() {

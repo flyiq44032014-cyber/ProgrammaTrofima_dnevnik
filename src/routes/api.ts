@@ -5,7 +5,7 @@ export const apiRouter = Router();
 
 apiRouter.get("/version", async (_req, res) => {
   try {
-    const children = await store.getChildren();
+    const children = store.childrenForParentPicker(await store.getChildren());
     res.json({
       app: "elektronnyj-dnevnik",
       pupils: children.map((c) => ({ id: c.id, name: c.name })),
@@ -18,7 +18,7 @@ apiRouter.get("/version", async (_req, res) => {
 
 apiRouter.get("/children", async (_req, res) => {
   try {
-    const children = await store.getChildren();
+    const children = store.childrenForParentPicker(await store.getChildren());
     res.json({ children });
   } catch (e) {
     console.error(e);
