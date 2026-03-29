@@ -48,11 +48,49 @@
 
   const $ = (sel, root = document) => root.querySelector(sel);
 
-  function api(path) {
-    return fetch(path).then((r) => {
-      if (!r.ok) return r.json().then((j) => Promise.reject(j));
-      return r.json();
+  /**
+   * Календарная дата YYYY-MM-DD без времени в API: интерпретируем как полдень *локального* часового пояса,
+   * чтобы день месяца и день недели совпадали со строкой (избегаем сдвига на соседние сутки из-за UTC).
+   */
+  function dateFromIsoCalendar(isoDateStr) {
+    return new Date(String(isoDateStr).trim() + "T12:00:00");
+  }
+
+  function readResponseBody(r) {
+    return r.text().then((text) => {
+      if (!text) return null;
+      try {
+        return JSON.parse(text);
+      } catch (_) {
+        return { _unparsed: true, raw: text.slice(0, 240) };
+      }
     });
+  }
+
+  function messageFromErrorBody(r, body) {
+    if (body && typeof body === "object" && !body._unparsed) {
+      const msg = body.error || body.message;
+      if (typeof msg === "string" && msg.trim()) return msg.trim();
+    }
+    if (r.status) return `Ошибка ${r.status}`;
+    return "Ошибка сервера";
+  }
+
+  function handleFetched(r, body) {
+    if (!r.ok) {
+      return Promise.reject({
+        message: messageFromErrorBody(r, body),
+        status: r.status,
+        body,
+      });
+    }
+    return body;
+  }
+
+  function api(path) {
+    return fetch(path).then((r) =>
+      readResponseBody(r).then((body) => handleFetched(r, body))
+    );
   }
 
   function apiPut(path, body) {
@@ -60,10 +98,9 @@
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    }).then((r) => {
-      if (!r.ok) return r.json().then((j) => Promise.reject(j));
-      return r.json();
-    });
+    }).then((r) =>
+      readResponseBody(r).then((parsed) => handleFetched(r, parsed))
+    );
   }
 
   function apiPost(path, body) {
@@ -71,10 +108,131 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    }).then((r) => {
-      if (!r.ok) return r.json().then((j) => Promise.reject(j));
-      return r.json();
+    }).then((r) =>
+      readResponseBody(r).then((parsed) => handleFetched(r, parsed))
+    );
+  }
+
+  function getApiErrorMessage(err) {
+    if (err == null) return "Неизвестная ошибка";
+    if (typeof err === "string") return err;
+    if (typeof err.message === "string" && err.message) return err.message;
+    if (err.name === "TypeError" && /fetch|network|Network/i.test(String(err.message)))
+      return "Нет соединения с сервером";
+    return "Ошибка запроса";
+  }
+
+  function announceStatus(text) {
+    const el = $("#app-announcer");
+    if (!el) return;
+    el.textContent = "";
+    requestAnimationFrame(() => {
+      el.textContent = text;
     });
+  }
+
+  function showModalFieldError(el, text) {
+    if (!el) return;
+    if (!text) {
+      el.textContent = "";
+      el.hidden = true;
+      return;
+    }
+    el.textContent = text;
+    el.hidden = false;
+  }
+
+  let focusTrapUnload = null;
+
+  function focusableSelector() {
+    return 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  }
+
+  function getFocusables(root) {
+    if (!root) return [];
+    return Array.from(root.querySelectorAll(focusableSelector())).filter(
+      (node) => node.offsetParent !== null || node.getClientRects().length > 0
+    );
+  }
+
+  function removeFocusTrap() {
+    if (typeof focusTrapUnload === "function") {
+      focusTrapUnload();
+    }
+    focusTrapUnload = null;
+  }
+
+  function installFocusTrap(root, onClose) {
+    removeFocusTrap();
+    const prevFocus = document.activeElement;
+    const handler = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const nodes = getFocusables(root);
+      if (!nodes.length) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    root.addEventListener("keydown", handler);
+    focusTrapUnload = () => {
+      root.removeEventListener("keydown", handler);
+      if (prevFocus && typeof prevFocus.focus === "function") {
+        try {
+          prevFocus.focus();
+        } catch (_) {}
+      }
+    };
+    requestAnimationFrame(() => {
+      const nodes = getFocusables(root);
+      if (nodes.length) nodes[0].focus();
+    });
+  }
+
+  function diaryLessonsSkeletonHtml() {
+    const rows = [1, 2, 3]
+      .map(
+        () =>
+          '<div class="skeleton-lesson"><div class="skeleton-lesson__title"></div><div class="skeleton-lesson__meta"></div></div>'
+      )
+      .join("");
+    return `<div class="skeleton-diary" aria-busy="true" aria-label="Загрузка расписания">${rows}</div>`;
+  }
+
+  function chemTableSkeletonHtml(rows) {
+    const n = rows || 6;
+    let html = "";
+    for (let i = 0; i < n; i++) {
+      html +=
+        '<tr class="skeleton-row">' +
+        '<td><span class="sk-text"></span></td>' +
+        '<td><span class="sk-text sk-text--short"></span></td>' +
+        '<td><span class="sk-text sk-text--tiny"></span></td>' +
+        "</tr>";
+    }
+    return html;
+  }
+
+  function closePickerModal() {
+    removeFocusTrap();
+    $("#picker").hidden = true;
+  }
+
+  function closeTPupilPicker() {
+    removeFocusTrap();
+    $("#t-pupil-picker").hidden = true;
   }
 
   function setTab(next) {
@@ -126,7 +284,7 @@
           const ps = $("#t-pupil-stats");
           if (ps) ps.innerHTML = "";
           updateTeacherHeader();
-          $("#picker").hidden = true;
+          closePickerModal();
           loadTeacherDiaryMeta().then(() => {
             loadTeacherDiary();
             if (tTab === "quarters") loadTeacherQuarterTable();
@@ -136,6 +294,7 @@
         list.appendChild(li);
       });
       $("#picker").hidden = false;
+      installFocusTrap($("#picker"), closePickerModal);
     };
     if (teacherClasses.length) {
       renderList();
@@ -150,11 +309,16 @@
         updateTeacherHeader();
         renderList();
       })
-      .catch(() => {
+      .catch((err) => {
+        const msg = getApiErrorMessage(err);
+        announceStatus(msg);
         const list = $("#picker-list");
         list.innerHTML =
-          '<li><p style="padding:12px;color:#c45;text-align:center">Не удалось загрузить классы</p></li>';
+          '<li><p style="padding:12px;color:#c45;text-align:center"></p></li>';
+        const p = list.querySelector("p");
+        if (p) p.textContent = msg;
         $("#picker").hidden = false;
+        installFocusTrap($("#picker"), closePickerModal);
       });
   }
 
@@ -180,7 +344,7 @@
         childId = c.id;
         $("#hdr-name").textContent = c.name;
         $("#hdr-class").textContent = c.classLabel;
-        $("#picker").hidden = true;
+        closePickerModal();
         expandedGradeDate = null;
         perfSubview = "chart";
         $("#perf-chart").classList.remove("view--hidden");
@@ -193,6 +357,7 @@
       list.appendChild(li);
     });
     $("#picker").hidden = false;
+    installFocusTrap($("#picker"), closePickerModal);
   }
 
   function loadChildren() {
@@ -216,7 +381,8 @@
         }
         updateDiaryNavState();
       })
-      .catch(() => {
+      .catch((err) => {
+        announceStatus(getApiErrorMessage(err));
         diaryDates = [];
         updateDiaryNavState();
       });
@@ -378,6 +544,7 @@
 
   function openLessonModal(lesson) {
     editingLesson = lesson;
+    showModalFieldError($("#lm-form-error"), "");
     $("#lm-lesson-id").value = lesson.id;
     $("#lm-title-in").value = lesson.title || "";
     $("#lm-time").value = lesson.timeLabel || "";
@@ -390,9 +557,12 @@
     $("#lm-grade").value =
       lesson.grade != null && lesson.grade !== "" ? String(lesson.grade) : "";
     $("#lesson-modal").hidden = false;
+    installFocusTrap($("#lesson-modal"), closeLessonModal);
   }
 
   function closeLessonModal() {
+    removeFocusTrap();
+    showModalFieldError($("#lm-form-error"), "");
     $("#lesson-modal").hidden = true;
     editingLesson = null;
   }
@@ -563,10 +733,14 @@
     }
     renderTeacherCalendar();
     const modal = $("#t-cal-modal");
-    if (modal) modal.hidden = false;
+    if (modal) {
+      modal.hidden = false;
+      installFocusTrap(modal, closeTeacherCalendar);
+    }
   }
 
   function closeTeacherCalendar() {
+    removeFocusTrap();
     const modal = $("#t-cal-modal");
     if (modal) modal.hidden = true;
   }
@@ -599,13 +773,16 @@
   function loadChemTable() {
     const tbody = $("#t-chem-tbody");
     if (!tbody) return;
-    tbody.innerHTML = "";
+    tbody.innerHTML = chemTableSkeletonHtml();
+    tbody.setAttribute("aria-busy", "true");
     api(
       `/api/teacher/classes/${encodeURIComponent(tClassId)}/chemistry-day/${encodeURIComponent(
         tDiaryDate
       )}`
     )
       .then((d) => {
+        tbody.removeAttribute("aria-busy");
+        tbody.innerHTML = "";
         (d.students || []).forEach((s) => {
           const tr = document.createElement("tr");
           tr.dataset.studentKey = s.studentKey;
@@ -623,9 +800,14 @@
           tbody.appendChild(tr);
         });
       })
-      .catch(() => {
+      .catch((err) => {
+        tbody.removeAttribute("aria-busy");
+        const msg = getApiErrorMessage(err);
+        announceStatus(msg);
         tbody.innerHTML =
-          '<tr><td colspan="3" style="text-align:center;color:#6b7a90">Нет данных</td></tr>';
+          '<tr><td colspan="3" style="text-align:center;color:#c45"></td></tr>';
+        const td = tbody.querySelector("td");
+        if (td) td.textContent = msg;
       });
   }
 
@@ -640,14 +822,18 @@
   function openStudentChemModal(s) {
     editingStudentKey = s.studentKey;
     $("#scm-title").textContent = s.name;
+    showModalFieldError($("#scm-form-error"), "");
     $("#scm-absent").checked = Boolean(s.absent);
     $("#scm-grade").value =
       s.absent || s.lessonGrade == null ? "" : String(s.lessonGrade);
     syncStudentChemGradeDisabled();
     $("#student-chem-modal").hidden = false;
+    installFocusTrap($("#student-chem-modal"), closeStudentChemModal);
   }
 
   function closeStudentChemModal() {
+    removeFocusTrap();
+    showModalFieldError($("#scm-form-error"), "");
     $("#student-chem-modal").hidden = true;
     editingStudentKey = null;
   }
@@ -699,8 +885,12 @@
         html += "</div>";
         box.innerHTML = html;
       })
-      .catch(() => {
-        box.innerHTML = '<p class="placeholder-msg">Не удалось загрузить статистику</p>';
+      .catch((err) => {
+        const msg = getApiErrorMessage(err);
+        announceStatus(msg);
+        box.innerHTML = '<p class="placeholder-msg"></p>';
+        const p = box.querySelector(".placeholder-msg");
+        if (p) p.textContent = msg;
       });
   }
 
@@ -734,7 +924,7 @@
         btn.querySelector(".p-name").textContent = name;
         btn.addEventListener("click", () => {
           tSelectedPupilKey = key;
-          $("#t-pupil-picker").hidden = true;
+          closeTPupilPicker();
           loadTutorPupilStats();
         });
         li.appendChild(btn);
@@ -760,7 +950,7 @@
           '<div class="meeting-announce__topic"></div></div>';
         const dt = panel.querySelector(".meeting-announce__dt");
         const top = panel.querySelector(".meeting-announce__topic");
-        const dFmt = new Date(m.date + "T12:00:00");
+        const dFmt = dateFromIsoCalendar(m.date);
         const dateStr = dFmt.toLocaleDateString("ru-RU", {
           day: "numeric",
           month: "long",
@@ -769,9 +959,12 @@
         if (dt) dt.textContent = `${dateStr}, ${m.time}`;
         if (top) top.textContent = m.topic;
       })
-      .catch(() => {
-        panel.innerHTML =
-          '<p class="placeholder-msg">Не удалось загрузить данные о собрании</p>';
+      .catch((err) => {
+        const msg = getApiErrorMessage(err);
+        announceStatus(msg);
+        panel.innerHTML = '<p class="placeholder-msg"></p>';
+        const p = panel.querySelector(".placeholder-msg");
+        if (p) p.textContent = msg;
       });
   }
 
@@ -784,7 +977,8 @@
         }
         updateTeacherDiaryNavState();
       })
-      .catch(() => {
+      .catch((err) => {
+        announceStatus(getApiErrorMessage(err));
         tDiaryDates = [];
         updateTeacherDiaryNavState();
       });
@@ -793,17 +987,18 @@
   function loadTeacherDiary() {
     const lessonsEl = $("#t-lessons");
     if (!lessonsEl) return;
-    lessonsEl.innerHTML =
-      '<p style="text-align:center;color:#6b7a90;font-size:0.88rem">Загрузка…</p>';
+    lessonsEl.innerHTML = diaryLessonsSkeletonHtml();
+    lessonsEl.setAttribute("aria-busy", "true");
     api(
       `/api/teacher/classes/${encodeURIComponent(tClassId)}/diary?date=${encodeURIComponent(
         tDiaryDate
       )}`
     )
       .then((d) => {
+        lessonsEl.removeAttribute("aria-busy");
         tDiaryDates = d.dates || tDiaryDates;
         const day = d.day;
-        $("#t-day-num").textContent = String(new Date(day.date + "T12:00:00").getDate());
+        $("#t-day-num").textContent = String(dateFromIsoCalendar(day.date).getDate());
         $("#t-weekday").textContent = day.weekday;
         $("#t-month-y").textContent = `${day.monthGenitive}, ${day.year}`;
         lessonsEl.innerHTML = "";
@@ -816,11 +1011,19 @@
         updateTeacherDiaryNavState();
         loadChemTable();
       })
-      .catch(() => {
+      .catch((err) => {
+        lessonsEl.removeAttribute("aria-busy");
+        const msg = getApiErrorMessage(err);
+        announceStatus(msg);
         lessonsEl.innerHTML =
-          '<p style="text-align:center;color:#c45">Нет расписания на этот день.</p>';
+          '<p style="text-align:center;color:#c45;font-size:0.88rem"></p>';
+        const p = lessonsEl.querySelector("p");
+        if (p) p.textContent = msg;
         const tbody = $("#t-chem-tbody");
-        if (tbody) tbody.innerHTML = "";
+        if (tbody) {
+          tbody.removeAttribute("aria-busy");
+          tbody.innerHTML = "";
+        }
         updateTeacherDiaryNavState();
       });
   }
@@ -882,26 +1085,32 @@
 
   function loadDiary() {
     const lessonsEl = $("#diary-lessons");
-    lessonsEl.innerHTML =
-      '<p style="text-align:center;color:#6b7a90;font-size:0.88rem">Загрузка…</p>';
+    lessonsEl.innerHTML = diaryLessonsSkeletonHtml();
+    lessonsEl.setAttribute("aria-busy", "true");
     api(
       `/api/children/${encodeURIComponent(childId)}/diary?date=${encodeURIComponent(
         diaryDate
       )}`
     )
       .then((d) => {
+        lessonsEl.removeAttribute("aria-busy");
         diaryDates = d.dates || diaryDates;
         const day = d.day;
-        $("#diary-day-num").textContent = String(new Date(day.date + "T12:00:00").getDate());
+        $("#diary-day-num").textContent = String(dateFromIsoCalendar(day.date).getDate());
         $("#diary-weekday").textContent = day.weekday;
         $("#diary-month-y").textContent = `${day.monthGenitive}, ${day.year}`;
         lessonsEl.innerHTML = "";
         day.lessons.forEach((les) => lessonsEl.appendChild(renderLesson(les)));
         updateDiaryNavState();
       })
-      .catch(() => {
+      .catch((err) => {
+        lessonsEl.removeAttribute("aria-busy");
+        const msg = getApiErrorMessage(err);
+        announceStatus(msg);
         lessonsEl.innerHTML =
-          '<p style="text-align:center;color:#c45">Нет расписания на этот день.</p>';
+          '<p style="text-align:center;color:#c45;font-size:0.88rem"></p>';
+        const p = lessonsEl.querySelector("p");
+        if (p) p.textContent = msg;
         updateDiaryNavState();
       });
   }
@@ -956,11 +1165,17 @@
         box.appendChild(b);
       });
     })
-      .catch(() => {
+      .catch((err) => {
+        const msg = getApiErrorMessage(err);
+        announceStatus(msg);
         $("#perf-date-line").textContent = "—";
         $("#perf-trimester").textContent = "";
         const box = $("#perf-rows");
-        if (box) box.innerHTML = '<p class="placeholder-msg">Нет данных успеваемости.</p>';
+        if (box) {
+          box.innerHTML = '<p class="placeholder-msg"></p>';
+          const p = box.querySelector(".placeholder-msg");
+          if (p) p.textContent = msg;
+        }
       });
   }
 
@@ -1023,8 +1238,10 @@
                 detailBox.appendChild(line);
               });
             })
-            .catch(() => {
-              detailBox.textContent = "Нет подробностей";
+            .catch((err) => {
+              const msg = getApiErrorMessage(err);
+              announceStatus(msg);
+              detailBox.textContent = msg;
             });
         });
 
@@ -1074,12 +1291,8 @@
   });
 
   $("#open-picker").addEventListener("click", openPicker);
-  $("#picker-close").addEventListener("click", () => {
-    $("#picker").hidden = true;
-  });
-  $(".picker__backdrop").addEventListener("click", () => {
-    $("#picker").hidden = true;
-  });
+  $("#picker-close").addEventListener("click", closePickerModal);
+  $(".picker__backdrop").addEventListener("click", closePickerModal);
 
   $("#grades-back").addEventListener("click", () => {
     perfSubview = "chart";
@@ -1141,14 +1354,14 @@
 
   $("#t-open-pupil-picker").addEventListener("click", () => {
     fillTutorPupilPicker();
-    $("#t-pupil-picker").hidden = false;
+    const pup = $("#t-pupil-picker");
+    if (pup) {
+      pup.hidden = false;
+      installFocusTrap(pup, closeTPupilPicker);
+    }
   });
-  $("#t-pupil-picker-close").addEventListener("click", () => {
-    $("#t-pupil-picker").hidden = true;
-  });
-  $("#t-pupil-picker-backdrop").addEventListener("click", () => {
-    $("#t-pupil-picker").hidden = true;
-  });
+  $("#t-pupil-picker-close").addEventListener("click", closeTPupilPicker);
+  $("#t-pupil-picker-backdrop").addEventListener("click", closeTPupilPicker);
 
   $("#t-meeting-form").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -1161,10 +1374,16 @@
       topic,
     })
       .then(() => {
-        alert("Собрание сохранено. Родители увидят его во вкладке «Собрание».");
+        const ok = "Собрание сохранено. Родители увидят его во вкладке «Собрание».";
+        announceStatus(ok);
+        alert(ok);
         $("#t-meeting-form").reset();
       })
-      .catch(() => alert("Не удалось сохранить собрание"));
+      .catch((err) => {
+        const msg = getApiErrorMessage(err);
+        announceStatus(msg);
+        alert(msg);
+      });
   });
 
   $("#scm-cancel").addEventListener("click", closeStudentChemModal);
@@ -1176,6 +1395,7 @@
   });
   $("#scm-save").addEventListener("click", () => {
     if (!editingStudentKey) return;
+    showModalFieldError($("#scm-form-error"), "");
     const raw = $("#scm-grade").value;
     const absent = $("#scm-absent").checked;
     const lessonGrade =
@@ -1190,12 +1410,17 @@
         closeStudentChemModal();
         loadChemTable();
       })
-      .catch(() => alert("Не удалось сохранить"));
+      .catch((err) => {
+        const msg = getApiErrorMessage(err);
+        announceStatus(msg);
+        showModalFieldError($("#scm-form-error"), msg);
+      });
   });
 
   $("#lesson-form").addEventListener("submit", (e) => {
     e.preventDefault();
     if (!editingLesson) return;
+    showModalFieldError($("#lm-form-error"), "");
     const gradeRaw = $("#lm-grade").value.trim();
     const body = {
       title: $("#lm-title-in").value,
@@ -1219,8 +1444,10 @@
         closeLessonModal();
         loadTeacherDiary();
       })
-      .catch(() => {
-        alert("Не удалось сохранить");
+      .catch((err) => {
+        const msg = getApiErrorMessage(err);
+        announceStatus(msg);
+        showModalFieldError($("#lm-form-error"), msg);
       });
   });
 

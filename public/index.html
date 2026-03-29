@@ -6,9 +6,10 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <title>Электронный дневник</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.1.1" />
+    <link rel="stylesheet" href="/css/app.css?v=1.1.2" />
   </head>
   <body>
+    <div id="app-announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
     <div class="app-bg" aria-hidden="true"></div>
 
     <div id="picker" class="picker" hidden>
@@ -307,6 +308,7 @@
       <div class="lesson-modal__backdrop" id="student-chem-backdrop"></div>
       <div class="lesson-modal__sheet" role="dialog" aria-labelledby="scm-title">
         <h2 class="lesson-modal__h" id="scm-title">Ученик</h2>
+        <p id="scm-form-error" class="form-err" role="alert" hidden></p>
         <p class="scm-hint">
           Оценка за урок химии и отметка об отсутствии (н). При пропуске оценка не ставится.
         </p>
@@ -335,6 +337,7 @@
       <div class="lesson-modal__backdrop"></div>
       <div class="lesson-modal__sheet" role="dialog" aria-labelledby="lm-title">
         <h2 class="lesson-modal__h" id="lm-title">Редактировать урок</h2>
+        <p id="lm-form-error" class="form-err" role="alert" hidden></p>
         <form id="lesson-form" class="lesson-form">
           <input type="hidden" id="lm-lesson-id" />
           <label>Предмет <input type="text" id="lm-title-in" name="title" required /></label>
@@ -354,6 +357,6 @@
       </div>
     </div>
 
-    <script src="/js/app.js?v=1.1.1" defer></script>
+    <script src="/js/app.js?v=1.1.2" defer></script>
   </body>
 </html>
