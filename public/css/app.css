@@ -591,15 +591,30 @@ body.mode-teacher .topbar__nutrition {
   gap: 10px;
 }
 
-.profile-add__row--plus {
+.profile-class-dual {
   display: flex;
   gap: 10px;
-  align-items: flex-end;
+  margin-top: 4px;
 }
 
-.profile-add__row--plus .profile-add__label {
+.profile-class-dual .profile-add__select {
   flex: 1;
   min-width: 0;
+  margin-top: 0;
+}
+
+.profile-add__select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  border: 1px solid #d8e0f0;
+  font: inherit;
+  font-size: 0.92rem;
+  box-sizing: border-box;
+  background: #fff;
+  color: var(--text);
 }
 
 .profile-add__label {
@@ -624,26 +639,25 @@ body.mode-teacher .topbar__nutrition {
   max-width: 120px;
 }
 
-.profile-icon-plus {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+.profile-modal__add-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
   border: none;
   border-radius: 12px;
-  background: var(--blue);
+  background: linear-gradient(180deg, var(--blue-soft), var(--blue));
   color: #fff;
-  font-size: 1.6rem;
-  font-weight: 500;
-  line-height: 1;
+  font: inherit;
+  font-weight: 600;
   cursor: pointer;
-  margin-bottom: 1px;
+  box-shadow: 0 4px 14px rgba(47, 111, 237, 0.3);
 }
 
-.profile-icon-plus:hover {
-  filter: brightness(1.05);
+.profile-modal__add-btn:hover {
+  filter: brightness(1.04);
 }
 
-.profile-icon-plus:focus-visible {
+.profile-modal__add-btn:focus-visible {
   outline: 2px solid var(--blue-soft);
   outline-offset: 2px;
 }

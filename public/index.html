@@ -687,13 +687,10 @@
           <h3 class="profile-section__title">Дети</h3>
           <ul id="profile-children-list" class="profile-list"></ul>
           <div class="profile-add">
-            <div class="profile-add__row profile-add__row--plus">
-              <label class="profile-add__label"
-                >Фамилия
-                <input type="text" id="prof-child-last" class="profile-add__input" autocomplete="family-name" />
-              </label>
-              <button type="button" class="profile-icon-plus" id="prof-child-add" title="Добавить ребёнка">+</button>
-            </div>
+            <label class="profile-add__label"
+              >Фамилия
+              <input type="text" id="prof-child-last" class="profile-add__input" autocomplete="family-name" />
+            </label>
             <label class="profile-add__label"
               >Имя
               <input type="text" id="prof-child-first" class="profile-add__input" autocomplete="given-name" />
@@ -704,26 +701,47 @@
             </label>
             <label class="profile-add__label"
               >Класс
-              <input type="text" id="prof-child-class" class="profile-add__input" placeholder="напр. 3 Б" />
+              <div class="profile-class-dual">
+                <select id="prof-child-grade" class="profile-add__select" aria-label="Параллель, 1–11">
+                  <option value="">—</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                </select>
+                <select id="prof-child-letter" class="profile-add__select" aria-label="Литера класса А–Г">
+                  <option value="">—</option>
+                  <option value="А">А</option>
+                  <option value="Б">Б</option>
+                  <option value="В">В</option>
+                  <option value="Г">Г</option>
+                </select>
+              </div>
             </label>
           </div>
+          <button type="button" class="profile-modal__add-btn" id="prof-child-add">Добавить</button>
         </div>
         <div id="profile-teacher-section" class="profile-section" hidden>
           <h3 class="profile-section__title">Классы</h3>
           <ul id="profile-classes-list" class="profile-list"></ul>
           <div class="profile-add">
-            <div class="profile-add__row profile-add__row--plus">
-              <label class="profile-add__label"
-                >Класс
-                <input type="text" id="prof-class-label" class="profile-add__input" placeholder="напр. 8 А" />
-              </label>
-              <button type="button" class="profile-icon-plus" id="prof-class-add" title="Добавить класс">+</button>
-            </div>
+            <label class="profile-add__label"
+              >Название / литера класса
+              <input type="text" id="prof-class-label" class="profile-add__input" placeholder="напр. 8 А" />
+            </label>
             <label class="profile-add__label profile-add__label--narrow"
               >Параллель (класс)
               <input type="number" id="prof-class-grade" class="profile-add__input" placeholder="8" min="1" max="11" />
             </label>
           </div>
+          <button type="button" class="profile-modal__add-btn" id="prof-class-add">Добавить</button>
         </div>
         <p id="profile-modal-error" class="profile-modal__err" role="alert" hidden></p>
         <div class="profile-modal__actions">
@@ -792,6 +810,6 @@
       </div>
     </div>
 
-    <script src="/js/app.js?v=1.2.4" defer></script>
+    <script src="/js/app.js?v=1.2.5" defer></script>
   </body>
 </html>

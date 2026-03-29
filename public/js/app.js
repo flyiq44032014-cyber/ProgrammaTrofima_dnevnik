@@ -849,13 +849,16 @@
     const lastEl = $("#prof-child-last");
     const firstEl = $("#prof-child-first");
     const patEl = $("#prof-child-pat");
-    const clsEl = $("#prof-child-class");
+    const gradeEl = $("#prof-child-grade");
+    const letterEl = $("#prof-child-letter");
     const last = lastEl ? String(lastEl.value).trim() : "";
     const first = firstEl ? String(firstEl.value).trim() : "";
     const pat = patEl ? String(patEl.value).trim() : "";
-    const cls = clsEl ? String(clsEl.value).trim() : "";
+    const grade = gradeEl ? String(gradeEl.value).trim() : "";
+    const letter = letterEl ? String(letterEl.value).trim() : "";
+    const cls = grade && letter ? `${grade} ${letter}` : "";
     if (!last || !first || !cls) {
-      setProfileError("Заполните фамилию, имя и класс.");
+      setProfileError("Заполните фамилию, имя, параллель (1–11) и литеру класса (А–Г).");
       return;
     }
     apiPost("/api/profile/children", {
@@ -883,7 +886,8 @@
         if (lastEl) lastEl.value = "";
         if (firstEl) firstEl.value = "";
         if (patEl) patEl.value = "";
-        if (clsEl) clsEl.value = "";
+        if (gradeEl) gradeEl.value = "";
+        if (letterEl) letterEl.value = "";
       })
       .catch((err) => setProfileError(getApiErrorMessage(err)));
   }
