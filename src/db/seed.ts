@@ -1,4 +1,5 @@
 import "dotenv/config";
+import bcrypt from "bcrypt";
 import type { PoolClient } from "pg";
 import fs from "fs";
 import path from "path";
@@ -232,6 +233,19 @@ async function run(): Promise<void> {
         );
       }
     }
+
+    await c.query(`DELETE FROM users`);
+    await c.query(
+      `INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3), ($4, $5, $6)`,
+      [
+        "roditel@yandex.ru",
+        bcrypt.hashSync("1234", 10),
+        "parent",
+        "uchitel@yandex.ru",
+        bcrypt.hashSync("0987", 10),
+        "teacher",
+      ]
+    );
 
     await c.query("COMMIT");
     console.log(

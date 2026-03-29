@@ -95,3 +95,13 @@ CREATE TABLE IF NOT EXISTS finals (
   sort_order INT NOT NULL DEFAULT 0,
   UNIQUE (child_id, subject)
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('parent', 'teacher')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users (lower(email));

@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <title>Электронный дневник</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.1.11" />
+    <link rel="stylesheet" href="/css/app.css?v=1.2.0" />
   </head>
   <body>
     <div id="app-announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -666,20 +666,39 @@
     <div id="auth-modal" class="auth-modal" hidden>
       <div class="auth-modal__backdrop" id="auth-backdrop"></div>
       <div class="auth-modal__sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <p class="auth-tabs" role="tablist">
+          <button type="button" class="auth-tab auth-tab--active" id="auth-tab-login" role="tab">
+            Вход
+          </button>
+          <button type="button" class="auth-tab" id="auth-tab-register" role="tab">Регистрация</button>
+        </p>
         <h2 id="auth-title" class="auth-modal__h">Вход в систему</h2>
         <form id="auth-form" class="auth-form">
           <label class="auth-field"
-            >Логин
-            <input type="text" id="auth-login" name="login" autocomplete="username" required />
+            >Почта
+            <input
+              type="email"
+              id="auth-email"
+              name="email"
+              autocomplete="username"
+              required
+            />
           </label>
           <label class="auth-field"
             >Пароль
             <input type="password" id="auth-password" name="password" autocomplete="current-password" required />
           </label>
+          <label class="auth-field" id="auth-role-wrap" hidden
+            >Роль (демо)
+            <select id="auth-role" name="role">
+              <option value="parent">Родитель</option>
+              <option value="teacher">Учитель</option>
+            </select>
+          </label>
           <p class="auth-hints">
-            <strong>Для учебных целей:</strong><br />
-            Родитель — логин <code>Roditel</code>, пароль <code>1234</code><br />
-            Учитель — логин <code>Uchitel</code>, пароль <code>0987</code>
+            <strong>Для учебных целей (вход):</strong><br />
+            Родитель — <code>Roditel@yandex.ru</code>, пароль <code>1234</code><br />
+            Учитель — <code>Uchitel@yandex.ru</code>, пароль <code>0987</code>
           </p>
           <p id="auth-error" class="auth-error" role="alert" hidden></p>
           <div class="auth-actions">
@@ -690,6 +709,6 @@
       </div>
     </div>
 
-    <script src="/js/app.js?v=1.1.11" defer></script>
+    <script src="/js/app.js?v=1.2.0" defer></script>
   </body>
 </html>

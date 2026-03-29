@@ -19,11 +19,8 @@
   /** @type {string | null} */
   let expandedGradeDate = null;
 
-  const AUTH_KEY = "dnevnik_auth";
-  const AUTH_ACCOUNTS = [
-    { login: "roditel", password: "1234", role: "parent" },
-    { login: "uchitel", password: "0987", role: "teacher" },
-  ];
+  /** @type {'login' | 'register'} */
+  let authMode = "login";
   /** @type {'parent' | 'teacher'} */
   let appRole = "parent";
   /** @type {string} */
@@ -91,14 +88,17 @@
     return body;
   }
 
+  const fetchCred = { credentials: "include" };
+
   function api(path) {
-    return fetch(path).then((r) =>
+    return fetch(path, fetchCred).then((r) =>
       readResponseBody(r).then((body) => handleFetched(r, body))
     );
   }
 
   function apiPut(path, body) {
     return fetch(path, {
+      ...fetchCred,
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -109,6 +109,7 @@
 
   function apiPost(path, body) {
     return fetch(path, {
+      ...fetchCred,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -685,27 +686,27 @@
     editingLesson = null;
   }
 
-  function readAuthSession() {
-    try {
-      const raw = sessionStorage.getItem(AUTH_KEY);
-      if (!raw) return null;
-      const o = JSON.parse(raw);
-      if (o && (o.role === "parent" || o.role === "teacher")) return o;
-    } catch (_) {}
-    return null;
-  }
-
-  function writeAuthSession(role, login) {
-    try {
-      sessionStorage.setItem(AUTH_KEY, JSON.stringify({ role, login: login || "" }));
-    } catch (_) {}
-  }
-
-  function tryAuthLogin(loginRaw, passwordRaw) {
-    const login = String(loginRaw || "").trim().toLowerCase();
-    const password = String(passwordRaw || "").trim();
-    const acc = AUTH_ACCOUNTS.find((a) => a.login === login && a.password === password);
-    return acc ? acc.role : null;
+  function setAuthMode(mode) {
+    authMode = mode;
+    const title = $("#auth-title");
+    const form = $("#auth-form");
+    const submit = form && form.querySelector(".auth-submit");
+    const roleWrap = $("#auth-role-wrap");
+    const tabLogin = $("#auth-tab-login");
+    const tabReg = $("#auth-tab-register");
+    if (mode === "register") {
+      if (title) title.textContent = "Регистрация";
+      if (submit) submit.textContent = "Создать аккаунт";
+      if (roleWrap) roleWrap.hidden = false;
+      if (tabReg) tabReg.classList.add("auth-tab--active");
+      if (tabLogin) tabLogin.classList.remove("auth-tab--active");
+    } else {
+      if (title) title.textContent = "Вход в систему";
+      if (submit) submit.textContent = "Войти";
+      if (roleWrap) roleWrap.hidden = true;
+      if (tabLogin) tabLogin.classList.add("auth-tab--active");
+      if (tabReg) tabReg.classList.remove("auth-tab--active");
+    }
   }
 
   function closeAuthModal() {
@@ -722,6 +723,7 @@
     }
     const f = $("#auth-form");
     if (f) f.reset();
+    setAuthMode("login");
     const m = $("#auth-modal");
     if (m) {
       m.hidden = false;
@@ -766,10 +768,11 @@
   }
 
   function logout() {
-    try {
-      sessionStorage.removeItem(AUTH_KEY);
-    } catch (_) {}
-    showLanding();
+    apiPost("/api/auth/logout", {})
+      .catch(() => {})
+      .finally(() => {
+        showLanding();
+      });
   }
 
   function applyRole(role) {
@@ -1769,32 +1772,64 @@
   $("#open-auth").addEventListener("click", () => openAuthModal());
   $("#auth-cancel").addEventListener("click", () => closeAuthModal());
   $("#auth-backdrop").addEventListener("click", () => closeAuthModal());
+  const tabLogin = $("#auth-tab-login");
+  const tabReg = $("#auth-tab-register");
+  if (tabLogin) tabLogin.addEventListener("click", () => setAuthMode("login"));
+  if (tabReg) tabReg.addEventListener("click", () => setAuthMode("register"));
+
   $("#auth-form").addEventListener("submit", (e) => {
     e.preventDefault();
-    const loginIn = $("#auth-login");
+    const emailIn = $("#auth-email");
     const passIn = $("#auth-password");
     const err = $("#auth-error");
-    const role = tryAuthLogin(loginIn && loginIn.value, passIn && passIn.value);
-    if (!role) {
-      if (err) {
-        err.textContent = "Неверный логин или пароль.";
-        err.hidden = false;
-      }
-      return;
+    const email = emailIn ? String(emailIn.value).trim() : "";
+    const password = passIn ? String(passIn.value) : "";
+    if (err) {
+      err.textContent = "";
+      err.hidden = true;
     }
-    const loginRaw = loginIn ? String(loginIn.value).trim() : "";
-    writeAuthSession(role, loginRaw);
-    closeAuthModal();
-    showMainApp();
-    bootstrapAfterLogin(role);
+    const path =
+      authMode === "register" ? "/api/auth/register" : "/api/auth/login";
+    const roleSel = $("#auth-role");
+    const payload =
+      authMode === "register"
+        ? {
+            email,
+            password,
+            role: roleSel && roleSel.value === "teacher" ? "teacher" : "parent",
+          }
+        : { email, password };
+
+    apiPost(path, payload)
+      .then((body) => {
+        const role = body && body.user && body.user.role;
+        if (role !== "parent" && role !== "teacher") {
+          throw new Error("Некорректный ответ сервера");
+        }
+        closeAuthModal();
+        showMainApp();
+        bootstrapAfterLogin(role);
+      })
+      .catch((caught) => {
+        const msg = getApiErrorMessage(caught);
+        if (err) {
+          err.textContent = msg;
+          err.hidden = false;
+        }
+      });
   });
   $("#btn-logout").addEventListener("click", () => logout());
 
-  const sess = readAuthSession();
-  if (sess) {
-    showMainApp();
-    bootstrapAfterLogin(sess.role);
-  } else {
-    showLanding();
-  }
+  fetch("/api/auth/me", fetchCred)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((data) => {
+      const role = data && data.user && data.user.role;
+      if (role === "parent" || role === "teacher") {
+        showMainApp();
+        bootstrapAfterLogin(role);
+      } else {
+        showLanding();
+      }
+    })
+    .catch(() => showLanding());
 })();
