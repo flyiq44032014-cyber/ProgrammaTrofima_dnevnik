@@ -19,10 +19,37 @@
   /** @type {string | null} */
   let expandedGradeDate = null;
 
+  const ROLE_KEY = "dnevnik_role";
+  /** @type {'parent' | 'teacher'} */
+  let appRole = "parent";
+  /** @type {string} */
+  let tClassId = "c8a";
+  /** @type {string} ISO */
+  let tDiaryDate = "2026-03-27";
+  /** @type {string[]} */
+  let tDiaryDates = [];
+  /** @type {{ name: string, subject: string } | null} */
+  let teacherProfile = null;
+  /** @type {{ id: string, label: string, grade: number }[]} */
+  let teacherClasses = [];
+  /** @type {Record<string, unknown> | null} */
+  let editingLesson = null;
+
   const $ = (sel, root = document) => root.querySelector(sel);
 
   function api(path) {
     return fetch(path).then((r) => {
+      if (!r.ok) return r.json().then((j) => Promise.reject(j));
+      return r.json();
+    });
+  }
+
+  function apiPut(path, body) {
+    return fetch(path, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => {
       if (!r.ok) return r.json().then((j) => Promise.reject(j));
       return r.json();
     });
@@ -157,7 +184,8 @@
     return m[key] || "teacher";
   }
 
-  function renderLesson(lesson) {
+  function renderLesson(lesson, opts) {
+    const teacherEdit = opts && opts.teacherEdit;
     const hasBlocks = Array.isArray(lesson.blocks) && lesson.blocks.length > 0;
     const detailsFromFields =
       !hasBlocks &&
@@ -250,10 +278,211 @@
 
     wrap.appendChild(top);
     if (hasBlocks || detailsFromFields) wrap.appendChild(body);
+    if (teacherEdit) {
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "lesson__edit";
+      edit.textContent = "Изменить";
+      edit.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openLessonModal(lesson);
+      });
+      wrap.appendChild(edit);
+    }
     return wrap;
   }
 
-  function attachDiarySwipe(el) {
+  function openLessonModal(lesson) {
+    editingLesson = lesson;
+    $("#lm-lesson-id").value = lesson.id;
+    $("#lm-title-in").value = lesson.title || "";
+    $("#lm-time").value = lesson.timeLabel || "";
+    $("#lm-teacher").value = lesson.teacher || "";
+    $("#lm-topic").value = lesson.topic || "";
+    $("#lm-hw").value = lesson.homework || "";
+    $("#lm-ctrl").value = lesson.controlWork || "";
+    $("#lm-place").value = lesson.place || "";
+    $("#lm-hwn").value = lesson.homeworkNext || "";
+    $("#lm-grade").value =
+      lesson.grade != null && lesson.grade !== "" ? String(lesson.grade) : "";
+    $("#lesson-modal").hidden = false;
+  }
+
+  function closeLessonModal() {
+    $("#lesson-modal").hidden = true;
+    editingLesson = null;
+  }
+
+  function applyRole(role) {
+    appRole = role === "teacher" ? "teacher" : "parent";
+    try {
+      localStorage.setItem(ROLE_KEY, appRole);
+    } catch (_) {}
+
+    const shellP = $("#shell-parent");
+    const shellT = $("#shell-teacher");
+    const nav = $(".bottomnav");
+
+    if (appRole === "teacher") {
+      shellP.classList.add("view--hidden");
+      shellT.classList.remove("view--hidden");
+      shellT.removeAttribute("hidden");
+      if (nav) nav.hidden = true;
+      const op = $("#open-picker");
+      if (op) op.hidden = true;
+      document.body.style.paddingBottom = "env(safe-area-inset-bottom, 0)";
+    } else {
+      shellP.classList.remove("view--hidden");
+      shellT.classList.add("view--hidden");
+      shellT.setAttribute("hidden", "");
+      if (nav) nav.hidden = false;
+      const op = $("#open-picker");
+      if (op) op.hidden = false;
+      document.body.style.paddingBottom = "";
+      const cur = children.find((c) => c.id === childId) || children[0];
+      if (cur) {
+        $("#hdr-name").textContent = cur.name;
+        $("#hdr-class").textContent = cur.classLabel;
+      }
+    }
+  }
+
+  function renderTeacherClassButtons() {
+    const box = $("#teacher-classes");
+    if (!box) return;
+    box.innerHTML = "";
+    teacherClasses.forEach((c) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "teacher-class-btn" + (c.id === tClassId ? " is-active" : "");
+      b.textContent = c.label;
+      b.addEventListener("click", () => {
+        tClassId = c.id;
+        renderTeacherClassButtons();
+        loadTeacherDiaryMeta().then(() => loadTeacherDiary());
+        loadTeacherRoster();
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function loadTeacherRoster() {
+    api(`/api/teacher/classes/${encodeURIComponent(tClassId)}/roster`).then((d) => {
+      const ul = $("#teacher-roster");
+      if (!ul) return;
+      ul.innerHTML = "";
+      (d.names || []).forEach((name) => {
+        const li = document.createElement("li");
+        li.textContent = name;
+        ul.appendChild(li);
+      });
+    });
+  }
+
+  function updateTeacherDiaryNavState() {
+    const prev = $("#t-diary-prev");
+    const next = $("#t-diary-next");
+    if (!prev || !next) return;
+    if (!tDiaryDates.length) {
+      prev.disabled = true;
+      next.disabled = true;
+      return;
+    }
+    const idx = tDiaryDates.indexOf(tDiaryDate);
+    if (idx < 0) {
+      prev.disabled = true;
+      next.disabled = true;
+      return;
+    }
+    prev.disabled = idx <= 0;
+    next.disabled = idx >= tDiaryDates.length - 1;
+  }
+
+  function shiftTeacherDiary(delta) {
+    if (!tDiaryDates.length) return;
+    const idx = tDiaryDates.indexOf(tDiaryDate);
+    if (idx < 0) {
+      tDiaryDate = tDiaryDates[0];
+      loadTeacherDiary();
+      return;
+    }
+    const n = idx + delta;
+    if (n < 0 || n >= tDiaryDates.length) return;
+    tDiaryDate = tDiaryDates[n];
+    loadTeacherDiary();
+  }
+
+  function loadTeacherDiaryMeta() {
+    return api(`/api/teacher/classes/${encodeURIComponent(tClassId)}/diary?date=${encodeURIComponent(tDiaryDate)}`)
+      .then((d) => {
+        tDiaryDates = d.dates || [];
+        if (tDiaryDates.length && !tDiaryDates.includes(tDiaryDate)) {
+          tDiaryDate = tDiaryDates[tDiaryDates.length - 1];
+        }
+        updateTeacherDiaryNavState();
+      })
+      .catch(() => {
+        tDiaryDates = [];
+        updateTeacherDiaryNavState();
+      });
+  }
+
+  function loadTeacherDiary() {
+    const lessonsEl = $("#t-lessons");
+    if (!lessonsEl) return;
+    lessonsEl.innerHTML =
+      '<p style="text-align:center;color:#6b7a90;font-size:0.88rem">Загрузка…</p>';
+    api(
+      `/api/teacher/classes/${encodeURIComponent(tClassId)}/diary?date=${encodeURIComponent(
+        tDiaryDate
+      )}`
+    )
+      .then((d) => {
+        tDiaryDates = d.dates || tDiaryDates;
+        const day = d.day;
+        $("#t-day-num").textContent = String(new Date(day.date + "T12:00:00").getDate());
+        $("#t-weekday").textContent = day.weekday;
+        $("#t-month-y").textContent = `${day.monthGenitive}, ${day.year}`;
+        lessonsEl.innerHTML = "";
+        day.lessons.forEach((les) => {
+          lessonsEl.appendChild(renderLesson(les, { teacherEdit: true }));
+        });
+        updateTeacherDiaryNavState();
+      })
+      .catch(() => {
+        lessonsEl.innerHTML =
+          '<p style="text-align:center;color:#c45">Нет расписания на этот день.</p>';
+        updateTeacherDiaryNavState();
+      });
+  }
+
+  function initTeacherShell() {
+    return api("/api/teacher/profile")
+      .then((p) => {
+        teacherProfile = p;
+        const line = $("#teacher-profile");
+        if (line) line.textContent = `${p.name} — ${p.subject}`;
+        $("#hdr-name").textContent = p.name;
+        $("#hdr-class").textContent = p.subject;
+        return api("/api/teacher/classes");
+      })
+      .then((d) => {
+        teacherClasses = d.classes || [];
+        if (teacherClasses.length && !teacherClasses.some((c) => c.id === tClassId)) {
+          tClassId = teacherClasses[0].id;
+        }
+        tDiaryDate = diaryDate;
+        renderTeacherClassButtons();
+        return loadTeacherDiaryMeta();
+      })
+      .then(() => {
+        loadTeacherDiary();
+        loadTeacherRoster();
+      });
+  }
+
+  function attachDiarySwipe(el, shiftFn) {
+    const shift = typeof shiftFn === "function" ? shiftFn : shiftDiary;
     let x0 = null;
     let y0 = null;
     el.addEventListener(
@@ -276,8 +505,8 @@
         x0 = null;
         y0 = null;
         if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
-        if (dx < 0) shiftDiary(1);
-        else shiftDiary(-1);
+        if (dx < 0) shift(1);
+        else shift(-1);
       },
       { passive: true }
     );
@@ -358,7 +587,13 @@
         });
         box.appendChild(b);
       });
-    });
+    })
+      .catch(() => {
+        $("#perf-date-line").textContent = "—";
+        $("#perf-trimester").textContent = "";
+        const box = $("#perf-rows");
+        if (box) box.innerHTML = '<p class="placeholder-msg">Нет данных успеваемости.</p>';
+      });
   }
 
   function loadGradesList() {
@@ -488,12 +723,76 @@
 
   $("#diary-prev").addEventListener("click", () => shiftDiary(-1));
   $("#diary-next").addEventListener("click", () => shiftDiary(1));
-  attachDiarySwipe($("#diary-card"));
+  attachDiarySwipe($("#diary-card"), shiftDiary);
 
-  loadChildren()
-    .then(() => loadDiaryMeta())
-    .then(() => {
-      loadDiary();
-      setTab("diary");
-    });
+  $("#t-diary-prev").addEventListener("click", () => shiftTeacherDiary(-1));
+  $("#t-diary-next").addEventListener("click", () => shiftTeacherDiary(1));
+  attachDiarySwipe($("#t-diary-card"), shiftTeacherDiary);
+
+  $("#lm-cancel").addEventListener("click", closeLessonModal);
+  $(".lesson-modal__backdrop").addEventListener("click", closeLessonModal);
+
+  $("#lesson-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!editingLesson) return;
+    const gradeRaw = $("#lm-grade").value.trim();
+    const body = {
+      title: $("#lm-title-in").value,
+      timeLabel: $("#lm-time").value,
+      teacher: $("#lm-teacher").value || null,
+      topic: $("#lm-topic").value || null,
+      homework: $("#lm-hw").value || null,
+      controlWork: $("#lm-ctrl").value || null,
+      place: $("#lm-place").value || null,
+      homeworkNext: $("#lm-hwn").value || null,
+      grade: gradeRaw === "" ? null : Number(gradeRaw),
+    };
+    const key = encodeURIComponent(String(editingLesson.id));
+    apiPut(
+      `/api/teacher/classes/${encodeURIComponent(tClassId)}/diary/${encodeURIComponent(
+        tDiaryDate
+      )}/lessons/${key}`,
+      body
+    )
+      .then(() => {
+        closeLessonModal();
+        loadTeacherDiary();
+      })
+      .catch(() => {
+        alert("Не удалось сохранить");
+      });
+  });
+
+  const roleSelect = $("#role-switch");
+  try {
+    const saved = localStorage.getItem(ROLE_KEY);
+    if (saved === "teacher" || saved === "parent") roleSelect.value = saved;
+  } catch (_) {}
+  applyRole(roleSelect.value === "teacher" ? "teacher" : "parent");
+
+  roleSelect.addEventListener("change", () => {
+    const v = roleSelect.value === "teacher" ? "teacher" : "parent";
+    applyRole(v);
+    if (v === "teacher") initTeacherShell();
+    else {
+      loadChildren()
+        .then(() => loadDiaryMeta())
+        .then(() => {
+          if (tab === "diary") loadDiary();
+          if (tab === "performance") setTab("performance");
+          if (tab === "finals") loadFinals();
+        });
+    }
+  });
+
+  if (appRole === "teacher") {
+    initTeacherShell();
+  } else {
+    loadChildren()
+      .then(() => loadDiaryMeta())
+      .then(() => {
+        loadDiary();
+        setTab("diary");
+      });
+  }
 })();

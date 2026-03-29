@@ -1,56 +1,44 @@
 import type {
   Child,
   DiaryDay,
-  DiaryLesson,
   FinalsPayload,
   GradeDayDetail,
   GradeDaySummary,
   PerformancePayload,
   PerformanceRow,
 } from "../types";
+import { rowToLesson } from "./lessonRow";
 import { getPool } from "./pool";
-
-function rowToLesson(r: Record<string, unknown>): DiaryLesson {
-  const blocksRaw = r.blocks_json;
-  let blocks: DiaryLesson["blocks"];
-  if (Array.isArray(blocksRaw)) {
-    blocks = blocksRaw as DiaryLesson["blocks"];
-  }
-  const lesson: DiaryLesson = {
-    id: String(r.lesson_key),
-    order: Number(r.lesson_order),
-    title: String(r.title),
-    timeLabel: String(r.time_label),
-    grade:
-      r.grade === null || r.grade === undefined
-        ? null
-        : Number(r.grade as string | number),
-  };
-  if (r.teacher) lesson.teacher = String(r.teacher);
-  if (r.topic) lesson.topic = String(r.topic);
-  if (r.homework) lesson.homework = String(r.homework);
-  if (r.control_work) lesson.controlWork = String(r.control_work);
-  if (r.place) lesson.place = String(r.place);
-  if (r.homework_next) lesson.homeworkNext = String(r.homework_next);
-  if (blocks) lesson.blocks = blocks;
-  return lesson;
-}
+import { getClassDiary, getClassDiaryDates } from "./teacherRepository";
 
 export async function getChildren(): Promise<Child[]> {
   const { rows } = await getPool().query<{
     id: string;
     name: string;
     class_label: string;
-  }>(`SELECT id, name, class_label FROM students ORDER BY id`);
+    class_schedule_id: string | null;
+  }>(
+    `SELECT id, name, class_label, class_schedule_id FROM students ORDER BY id`
+  );
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
     classLabel: r.class_label,
+    ...(r.class_schedule_id ? { classScheduleId: r.class_schedule_id } : {}),
   }));
 }
 
 export async function getDiary(childId: string, isoDate: string): Promise<DiaryDay | null> {
   const pool = getPool();
+  const s = await pool.query<{ class_schedule_id: string | null }>(
+    `SELECT class_schedule_id FROM students WHERE id = $1`,
+    [childId]
+  );
+  if (s.rows.length === 0) return null;
+  const scheduleId = s.rows[0].class_schedule_id;
+  if (scheduleId) {
+    return getClassDiary(scheduleId, isoDate);
+  }
   const day = await pool.query<{
     date_iso: string;
     weekday: string;
@@ -79,6 +67,16 @@ export async function getDiary(childId: string, isoDate: string): Promise<DiaryD
 }
 
 export async function getDiaryDates(childId: string): Promise<string[]> {
+  const pool = getPool();
+  const s = await pool.query<{ class_schedule_id: string | null }>(
+    `SELECT class_schedule_id FROM students WHERE id = $1`,
+    [childId]
+  );
+  if (s.rows.length === 0) return [];
+  const scheduleId = s.rows[0].class_schedule_id;
+  if (scheduleId) {
+    return getClassDiaryDates(scheduleId);
+  }
   const { rows } = await getPool().query<{ d: string }>(
     `SELECT date_iso::text AS d FROM diary_days WHERE child_id = $1 ORDER BY date_iso`,
     [childId]

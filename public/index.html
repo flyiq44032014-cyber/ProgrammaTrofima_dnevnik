@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Электронный дневник</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.0.1" />
+    <link rel="stylesheet" href="/css/app.css?v=1.0.4" />
   </head>
   <body>
     <div class="app-bg" aria-hidden="true"></div>
@@ -23,9 +23,16 @@
         <span class="topbar__name" id="hdr-name">—</span>
         <span class="topbar__class" id="hdr-class">—</span>
       </button>
+      <div class="topbar__role">
+        <label class="topbar__role-label" for="role-switch">Режим</label>
+        <select id="role-switch" class="role-select" aria-label="Родитель или учитель">
+          <option value="parent">Родитель</option>
+          <option value="teacher">Учитель</option>
+        </select>
+      </div>
     </header>
 
-    <main class="main">
+    <main class="main" id="shell-parent">
       <section id="view-diary" class="view" data-view="diary">
         <div class="diary-wrap">
           <button type="button" class="diary-nav-btn" id="diary-prev" aria-label="Предыдущий день">
@@ -149,6 +156,65 @@
       </button>
     </nav>
 
-    <script src="/js/app.js?v=1.0.1" defer></script>
+    <div id="shell-teacher" class="shell-teacher view--hidden" hidden>
+      <main class="main main--teacher">
+        <div class="teacher-head card card--paper">
+          <div class="teacher-head__title" id="teacher-profile">—</div>
+          <p class="teacher-head__hint">Выберите класс и день. Изменения сохраняются и видны родителям в дневнике класса.</p>
+          <div class="teacher-classes" id="teacher-classes"></div>
+        </div>
+        <div class="diary-wrap teacher-diary-wrap">
+          <button type="button" class="diary-nav-btn" id="t-diary-prev" aria-label="Предыдущий день">‹</button>
+          <div class="card card--paper diary-card" id="t-diary-card">
+            <div class="card-head">
+              <div class="cal-ico" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="5" width="18" height="16" rx="2" stroke="white" stroke-width="1.6" />
+                  <path d="M8 3v4M16 3v4M3 11h18" stroke="white" stroke-width="1.6" />
+                </svg>
+              </div>
+              <div class="date-ribbon" id="t-date-banner">
+                <span class="date-ribbon__num" id="t-day-num">—</span>
+                <div class="date-ribbon__rest">
+                  <span id="t-weekday">—</span>
+                  <span id="t-month-y">—</span>
+                </div>
+              </div>
+            </div>
+            <div class="roster-box" id="teacher-roster-wrap">
+              <div class="roster-title">Ученики класса</div>
+              <ul class="roster-list" id="teacher-roster"></ul>
+            </div>
+            <div id="t-lessons" class="lessons lessons--teacher"></div>
+          </div>
+          <button type="button" class="diary-nav-btn" id="t-diary-next" aria-label="Следующий день">›</button>
+        </div>
+      </main>
+    </div>
+
+    <div id="lesson-modal" class="lesson-modal" hidden>
+      <div class="lesson-modal__backdrop"></div>
+      <div class="lesson-modal__sheet" role="dialog" aria-labelledby="lm-title">
+        <h2 class="lesson-modal__h" id="lm-title">Редактировать урок</h2>
+        <form id="lesson-form" class="lesson-form">
+          <input type="hidden" id="lm-lesson-id" />
+          <label>Предмет <input type="text" id="lm-title-in" name="title" required /></label>
+          <label>Время <input type="text" id="lm-time" name="timeLabel" /></label>
+          <label>Преподаватель <input type="text" id="lm-teacher" name="teacher" /></label>
+          <label>Тема <input type="text" id="lm-topic" name="topic" /></label>
+          <label>Домашнее задание <textarea id="lm-hw" name="homework" rows="2"></textarea></label>
+          <label>Контрольная <input type="text" id="lm-ctrl" name="controlWork" /></label>
+          <label>Место <input type="text" id="lm-place" name="place" /></label>
+          <label>ДЗ на след. урок <textarea id="lm-hwn" name="homeworkNext" rows="2"></textarea></label>
+          <label>Оценка <input type="text" id="lm-grade" name="grade" placeholder="пусто" /></label>
+          <div class="lesson-modal__actions">
+            <button type="button" class="btn-cancel" id="lm-cancel">Отмена</button>
+            <button type="submit" class="btn-save">Сохранить</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="/js/app.js?v=1.0.4" defer></script>
   </body>
 </html>

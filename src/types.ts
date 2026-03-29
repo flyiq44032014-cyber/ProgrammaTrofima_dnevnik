@@ -2,6 +2,8 @@ export interface Child {
   id: string;
   name: string;
   classLabel: string;
+  /** Если задано — дневник берётся из расписания класса (редактирует учитель) */
+  classScheduleId?: string;
 }
 
 export interface LessonBlock {

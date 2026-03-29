@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import path from "path";
 import { apiRouter } from "./routes/api";
+import { teacherRouter } from "./routes/teacher";
 
 const app = express();
 
@@ -11,6 +12,7 @@ app.use("/api", (_req, res, next) => {
   res.set("Pragma", "no-cache");
   next();
 });
+app.use("/api/teacher", teacherRouter);
 app.use("/api", apiRouter);
 
 const publicDir = path.join(process.cwd(), "public");

@@ -6,10 +6,38 @@ import type {
   GradeDaySummary,
   PerformancePayload,
 } from "../types";
+import {
+  memGetClassDiary,
+  memGetClassDiaryDates,
+} from "./teacherMemory";
 
 const children: Child[] = [
   { id: "nika", name: "Ястребова Ника", classLabel: "3 Б класс" },
   { id: "efrem", name: "Ястребова Ефрем", classLabel: "6 А класс" },
+  {
+    id: "demo8a",
+    name: "Класс 8 А (родитель)",
+    classLabel: "8 А класс",
+    classScheduleId: "c8a",
+  },
+  {
+    id: "demo9a",
+    name: "Класс 9 А (родитель)",
+    classLabel: "9 А класс",
+    classScheduleId: "c9a",
+  },
+  {
+    id: "demo10a",
+    name: "Класс 10 А (родитель)",
+    classLabel: "10 А класс",
+    classScheduleId: "c10a",
+  },
+  {
+    id: "demo11a",
+    name: "Класс 11 А (родитель)",
+    classLabel: "11 А класс",
+    classScheduleId: "c11a",
+  },
 ];
 
 function lessonBlocks(
@@ -1052,12 +1080,20 @@ export function getChildren(): Child[] {
 }
 
 export function getDiary(childId: string, isoDate: string): DiaryDay | null {
+  const ch = children.find((c) => c.id === childId);
+  if (ch?.classScheduleId) {
+    return memGetClassDiary(ch.classScheduleId, isoDate);
+  }
   const byDate = diaryByChild[childId];
   if (!byDate) return null;
   return byDate[isoDate] ?? null;
 }
 
 export function getDiaryDates(childId: string): string[] {
+  const ch = children.find((c) => c.id === childId);
+  if (ch?.classScheduleId) {
+    return memGetClassDiaryDates(ch.classScheduleId);
+  }
   const byDate = diaryByChild[childId];
   if (!byDate) return [];
   return Object.keys(byDate).sort();

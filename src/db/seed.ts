@@ -1,8 +1,81 @@
 import "dotenv/config";
+import type { PoolClient } from "pg";
 import fs from "fs";
 import path from "path";
+import {
+  buildClassDiaries,
+  buildRosters,
+  schoolClassesMeta,
+} from "../data/teacherSeedData";
 import { getSeedSnapshot } from "../data/mock";
 import { closePool, getPool } from "./pool";
+
+async function seedTeacherTables(c: PoolClient): Promise<void> {
+  const rosters = buildRosters();
+  const diaries = buildClassDiaries();
+  for (const cl of schoolClassesMeta) {
+    await c.query(
+      `INSERT INTO school_classes (id, grade, label, subject_name) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (id) DO UPDATE SET grade = EXCLUDED.grade, label = EXCLUDED.label, subject_name = EXCLUDED.subject_name`,
+      [cl.id, cl.grade, cl.label, cl.subjectName]
+    );
+  }
+  await c.query(`DELETE FROM class_roster WHERE class_id = ANY($1::text[])`, [
+    schoolClassesMeta.map((x) => x.id),
+  ]);
+  for (const cl of schoolClassesMeta) {
+    const names = rosters[cl.id] ?? [];
+    for (let i = 0; i < names.length; i++) {
+      await c.query(
+        `INSERT INTO class_roster (class_id, full_name, sort_order) VALUES ($1, $2, $3)`,
+        [cl.id, names[i], i]
+      );
+    }
+  }
+  await c.query(`DELETE FROM class_diary_lessons WHERE class_id = ANY($1::text[])`, [
+    schoolClassesMeta.map((x) => x.id),
+  ]);
+  await c.query(`DELETE FROM class_diary_days WHERE class_id = ANY($1::text[])`, [
+    schoolClassesMeta.map((x) => x.id),
+  ]);
+  for (const cl of schoolClassesMeta) {
+    const byDate = diaries[cl.id];
+    if (!byDate) continue;
+    for (const [, day] of Object.entries(byDate)) {
+      await c.query(
+        `INSERT INTO class_diary_days (class_id, date_iso, weekday, month_genitive, year)
+         VALUES ($1, $2::date, $3, $4, $5)`,
+        [cl.id, day.date, day.weekday, day.monthGenitive, day.year]
+      );
+      for (const les of day.lessons) {
+        await c.query(
+          `INSERT INTO class_diary_lessons (
+             class_id, date_iso, lesson_order, lesson_key, title, time_label, grade,
+             teacher, topic, homework, control_work, place, homework_next, blocks_json
+           ) VALUES (
+             $1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb
+           )`,
+          [
+            cl.id,
+            day.date,
+            les.order,
+            les.id,
+            les.title,
+            les.timeLabel,
+            les.grade ?? null,
+            les.teacher ?? null,
+            les.topic ?? null,
+            les.homework ?? null,
+            les.controlWork ?? null,
+            les.place ?? null,
+            les.homeworkNext ?? null,
+            les.blocks && les.blocks.length ? JSON.stringify(les.blocks) : null,
+          ]
+        );
+      }
+    }
+  }
+}
 
 async function run(): Promise<void> {
   if (!process.env.DATABASE_URL) {
@@ -13,18 +86,27 @@ async function run(): Promise<void> {
   const schemaPath = path.join(process.cwd(), "src", "db", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf8");
   await pool.query(schema);
+  const schemaTeacherPath = path.join(process.cwd(), "src", "db", "schema_teacher.sql");
+  await pool.query(fs.readFileSync(schemaTeacherPath, "utf8"));
 
   const snap = getSeedSnapshot();
 
   const c = await pool.connect();
   try {
     await c.query("BEGIN");
-    await c.query("TRUNCATE students RESTART IDENTITY CASCADE");
+    await c.query("TRUNCATE students CASCADE");
+    await c.query("TRUNCATE school_classes CASCADE");
+
+    await seedTeacherTables(c);
 
     for (const s of snap.children) {
+      const cs =
+        "classScheduleId" in s && s.classScheduleId
+          ? s.classScheduleId
+          : null;
       await c.query(
-        `INSERT INTO students (id, name, class_label) VALUES ($1, $2, $3)`,
-        [s.id, s.name, s.classLabel]
+        `INSERT INTO students (id, name, class_label, class_schedule_id) VALUES ($1, $2, $3, $4)`,
+        [s.id, s.name, s.classLabel, cs]
       );
     }
 
@@ -152,7 +234,9 @@ async function run(): Promise<void> {
     }
 
     await c.query("COMMIT");
-    console.log("База заполнена: students, дневник, успеваемость, оценки, итоговые.");
+    console.log(
+      "База заполнена: students, дневник, успеваемость, оценки, итоговые, классы учителя."
+    );
   } catch (e) {
     await c.query("ROLLBACK");
     throw e;
