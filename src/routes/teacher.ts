@@ -157,6 +157,14 @@ teacherRouter.put(
       patch.lessonGrade = g as 2 | 3 | 4 | 5;
     }
     if (typeof body.absent === "boolean") patch.absent = body.absent;
+    const wantsGrade =
+      patch.lessonGrade !== undefined && patch.lessonGrade !== null;
+    if (patch.absent === true && wantsGrade) {
+      res.status(400).json({
+        error: "При отметке пропуска оценку за урок поставить нельзя",
+      });
+      return;
+    }
     try {
       const roster = await rosterSafe(classId);
       const ok = mem.memPatchChemStudent(

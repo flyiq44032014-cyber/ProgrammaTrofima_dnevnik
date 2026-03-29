@@ -78,16 +78,67 @@ export function buildRosters(): Record<string, string[]> {
   return out;
 }
 
-const week: { iso: string; weekday: string; monthGenitive: string }[] = [
-  { iso: "2026-03-23", weekday: "Понедельник", monthGenitive: "марта" },
-  { iso: "2026-03-24", weekday: "Вторник", monthGenitive: "марта" },
-  { iso: "2026-03-25", weekday: "Среда", monthGenitive: "марта" },
-  { iso: "2026-03-26", weekday: "Четверг", monthGenitive: "марта" },
-  { iso: "2026-03-27", weekday: "Пятница", monthGenitive: "марта" },
+const RU_MONTHS_GEN = [
+  "января",
+  "февраля",
+  "марта",
+  "апреля",
+  "мая",
+  "июня",
+  "июля",
+  "августа",
+  "сентября",
+  "октября",
+  "ноября",
+  "декабря",
 ];
 
-/** Даты учебной недели в демо-данных (дневник класса / химия) */
-export const TEACHER_WEEK_ISOS = week.map((w) => w.iso);
+const RU_WEEKDAYS = [
+  "Воскресенье",
+  "Понедельник",
+  "Вторник",
+  "Среда",
+  "Четверг",
+  "Пятница",
+  "Суббота",
+];
+
+/** 10 учебных дней: 2 полные недели (без субботы и воскресенья), с указанной даты пн */
+export function buildTwoWeekSchoolDays(
+  startYear: number,
+  /** 0 = январь */
+  startMonthIndex: number,
+  startDay: number
+): { iso: string; weekday: string; monthGenitive: string; year: number }[] {
+  const out: {
+    iso: string;
+    weekday: string;
+    monthGenitive: string;
+    year: number;
+  }[] = [];
+  const cur = new Date(Date.UTC(startYear, startMonthIndex, startDay));
+  let added = 0;
+  while (added < 10) {
+    const dow = cur.getUTCDay();
+    if (dow !== 0 && dow !== 6) {
+      const iso = cur.toISOString().slice(0, 10);
+      out.push({
+        iso,
+        weekday: RU_WEEKDAYS[dow],
+        monthGenitive: RU_MONTHS_GEN[cur.getUTCMonth()],
+        year: cur.getUTCFullYear(),
+      });
+      added++;
+    }
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  return out;
+}
+
+const schoolDays = buildTwoWeekSchoolDays(2026, 2, 23);
+
+/** Даты учебных дней в демо (2 недели, пн–пт) */
+export const TEACHER_WEEK_ISOS = schoolDays.map((w) => w.iso);
 
 export const CHEMISTRY_LESSON_TITLE = "Химия";
 
@@ -169,12 +220,12 @@ export function buildClassDiaries(): Record<string, Record<string, DiaryDay>> {
   const out: Record<string, Record<string, DiaryDay>> = {};
   for (const c of schoolClassesMeta) {
     out[c.id] = {};
-    for (const d of week) {
+    for (const d of schoolDays) {
       out[c.id][d.iso] = {
         date: d.iso,
         weekday: d.weekday,
         monthGenitive: d.monthGenitive,
-        year: 2026,
+        year: d.year,
         lessons: lessonsForDay(c.grade, d.iso, 0),
       };
     }

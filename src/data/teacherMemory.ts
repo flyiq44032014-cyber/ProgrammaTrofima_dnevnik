@@ -51,22 +51,34 @@ function seedChemAndQuarters(): void {
     for (const iso of TEACHER_WEEK_ISOS) {
       const rnd = rngFor(c.id, iso, "chem");
       const n = roster.length;
-      const gCount = 2 + Math.floor(rnd() * 4);
-      const aCount = 2 + Math.floor(rnd() * 5);
-      const gradeIdx = new Set<number>();
+      const aCount = Math.min(n, 2 + Math.floor(rnd() * 5));
+      const maxGrades = Math.min(n - aCount, 2 + Math.floor(rnd() * 4));
       const absIdx = new Set<number>();
-      while (gradeIdx.size < gCount && n > 0) gradeIdx.add(Math.floor(rnd() * n));
-      while (absIdx.size < aCount && n > 0) absIdx.add(Math.floor(rnd() * n));
+      let tries = 0;
+      while (absIdx.size < aCount && n > 0 && tries < n * 20) {
+        tries++;
+        absIdx.add(Math.floor(rnd() * n));
+      }
+      const gradeIdx = new Set<number>();
+      tries = 0;
+      while (gradeIdx.size < maxGrades && n > 0 && tries < n * 40) {
+        tries++;
+        const i = Math.floor(rnd() * n);
+        if (!absIdx.has(i)) gradeIdx.add(i);
+      }
 
       chemByClassDate[c.id][iso] = {};
       roster.forEach((_, i) => {
         const key = String(i);
-        const lessonGrade = gradeIdx.has(i)
-          ? ((2 + Math.floor(rnd() * 4)) as 2 | 3 | 4 | 5)
-          : null;
+        const absent = absIdx.has(i);
+        const lessonGrade = absent
+          ? null
+          : gradeIdx.has(i)
+            ? ((2 + Math.floor(rnd() * 4)) as 2 | 3 | 4 | 5)
+            : null;
         chemByClassDate[c.id][iso][key] = {
           lessonGrade,
-          absent: absIdx.has(i),
+          absent,
         };
       });
     }
@@ -150,11 +162,12 @@ export function memGetChemistryDay(
   const students = roster.map((name, i) => {
     const key = String(i);
     const st = slot[key] ?? { lessonGrade: null, absent: false };
+    const absent = Boolean(st.absent);
     return {
       studentKey: key,
       name,
-      lessonGrade: st.lessonGrade,
-      absent: st.absent,
+      lessonGrade: absent ? null : st.lessonGrade,
+      absent,
     };
   });
   return {
@@ -175,6 +188,11 @@ export function memPatchChemStudent(
   if (!row) return false;
   if (patch.lessonGrade !== undefined) row.lessonGrade = patch.lessonGrade;
   if (patch.absent !== undefined) row.absent = patch.absent;
+  if (row.absent) {
+    row.lessonGrade = null;
+  } else if (row.lessonGrade != null) {
+    row.absent = false;
+  }
   return true;
 }
 

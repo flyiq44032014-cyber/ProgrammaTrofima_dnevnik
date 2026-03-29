@@ -25,9 +25,12 @@
   /** @type {string} */
   let tClassId = "c8a";
   /** @type {string} ISO */
-  let tDiaryDate = "2026-03-27";
+  let tDiaryDate = "2026-04-03";
   /** @type {string[]} */
   let tDiaryDates = [];
+  let tCalViewYear = 2026;
+  /** month index 0..11 for teacher date-picker */
+  let tCalViewMonth = 2;
   /** @type {{ name: string, subject: string } | null} */
   let teacherProfile = null;
   /** @type {{ id: string, label: string, grade: number }[]} */
@@ -474,6 +477,100 @@
     loadTeacherDiary();
   }
 
+  function padIsoPart(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function isoFromYmd(y, m1, d) {
+    return `${y}-${padIsoPart(m1)}-${padIsoPart(d)}`;
+  }
+
+  function parseIsoParts(iso) {
+    const a = String(iso).split("-").map(Number);
+    return { y: a[0], m: a[1], d: a[2] };
+  }
+
+  function isWeekendYmd(y, month0, day) {
+    const dt = new Date(y, month0, day, 12, 0, 0);
+    const w = dt.getDay();
+    return w === 0 || w === 6;
+  }
+
+  function renderTeacherCalendar() {
+    const title = $("#t-cal-title");
+    const grid = $("#t-cal-grid");
+    if (!title || !grid) return;
+    const y = tCalViewYear;
+    const m0 = tCalViewMonth;
+    const mid = new Date(y, m0, 15, 12, 0, 0);
+    title.textContent = mid.toLocaleDateString("ru-RU", {
+      month: "long",
+      year: "numeric",
+    });
+    grid.innerHTML = "";
+    const hasSchoolSet = tDiaryDates.length > 0;
+    const dim = new Date(y, m0 + 1, 0, 12, 0, 0).getDate();
+    const firstDow = new Date(y, m0, 1, 12, 0, 0).getDay();
+    const lead = (firstDow + 6) % 7;
+
+    for (let i = 0; i < lead; i++) {
+      const pad = document.createElement("div");
+      pad.className = "t-cal-pad";
+      grid.appendChild(pad);
+    }
+    for (let d = 1; d <= dim; d++) {
+      const iso = isoFromYmd(y, m0 + 1, d);
+      const wknd = isWeekendYmd(y, m0, d);
+      const inSchool = !hasSchoolSet || tDiaryDates.indexOf(iso) >= 0;
+      const isSel = iso === tDiaryDate;
+
+      if (wknd) {
+        const cell = document.createElement("div");
+        cell.className = "t-cal-cell t-cal-cell--weekend";
+        cell.textContent = String(d);
+        cell.title = "Выходной";
+        grid.appendChild(cell);
+      } else if (!inSchool) {
+        const cell = document.createElement("div");
+        cell.className = "t-cal-cell t-cal-cell--off";
+        cell.textContent = String(d);
+        cell.title = "Нет учебного дня";
+        grid.appendChild(cell);
+      } else {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className =
+          "t-cal-cell t-cal-cell--day" + (isSel ? " is-selected" : "");
+        btn.textContent = String(d);
+        btn.addEventListener("click", () => {
+          tDiaryDate = iso;
+          closeTeacherCalendar();
+          loadTeacherDiary();
+        });
+        grid.appendChild(btn);
+      }
+    }
+  }
+
+  function openTeacherCalendar() {
+    const p = parseIsoParts(tDiaryDate);
+    if (p.y && p.m) {
+      tCalViewYear = p.y;
+      tCalViewMonth = p.m - 1;
+    } else {
+      tCalViewYear = 2026;
+      tCalViewMonth = 2;
+    }
+    renderTeacherCalendar();
+    const modal = $("#t-cal-modal");
+    if (modal) modal.hidden = false;
+  }
+
+  function closeTeacherCalendar() {
+    const modal = $("#t-cal-modal");
+    if (modal) modal.hidden = true;
+  }
+
   function setTeacherTab(next) {
     tTab = next;
     document.querySelectorAll(".t-view").forEach((v) => v.classList.add("view--hidden"));
@@ -532,11 +629,21 @@
       });
   }
 
+  function syncStudentChemGradeDisabled() {
+    const sel = $("#scm-grade");
+    const absent = $("#scm-absent").checked;
+    if (!sel) return;
+    sel.disabled = absent;
+    if (absent) sel.value = "";
+  }
+
   function openStudentChemModal(s) {
     editingStudentKey = s.studentKey;
     $("#scm-title").textContent = s.name;
-    $("#scm-grade").value = s.lessonGrade != null ? String(s.lessonGrade) : "";
     $("#scm-absent").checked = Boolean(s.absent);
+    $("#scm-grade").value =
+      s.absent || s.lessonGrade == null ? "" : String(s.lessonGrade);
+    syncStudentChemGradeDisabled();
     $("#student-chem-modal").hidden = false;
   }
 
@@ -990,6 +1097,35 @@
   $("#t-diary-next").addEventListener("click", () => shiftTeacherDiary(1));
   attachDiarySwipe($("#t-diary-card"), shiftTeacherDiary);
 
+  const tCalOpen = $("#t-cal-open");
+  if (tCalOpen) tCalOpen.addEventListener("click", openTeacherCalendar);
+  const tCalBd = $("#t-cal-backdrop");
+  if (tCalBd) tCalBd.addEventListener("click", closeTeacherCalendar);
+  const tCalClose = $("#t-cal-close");
+  if (tCalClose) tCalClose.addEventListener("click", closeTeacherCalendar);
+  const tCalPrev = $("#t-cal-prev");
+  if (tCalPrev) {
+    tCalPrev.addEventListener("click", () => {
+      tCalViewMonth -= 1;
+      if (tCalViewMonth < 0) {
+        tCalViewMonth = 11;
+        tCalViewYear -= 1;
+      }
+      renderTeacherCalendar();
+    });
+  }
+  const tCalNext = $("#t-cal-next");
+  if (tCalNext) {
+    tCalNext.addEventListener("click", () => {
+      tCalViewMonth += 1;
+      if (tCalViewMonth > 11) {
+        tCalViewMonth = 0;
+        tCalViewYear += 1;
+      }
+      renderTeacherCalendar();
+    });
+  }
+
   $("#lm-cancel").addEventListener("click", closeLessonModal);
   document.querySelectorAll("#lesson-modal .lesson-modal__backdrop").forEach((el) => {
     el.addEventListener("click", closeLessonModal);
@@ -1033,11 +1169,17 @@
 
   $("#scm-cancel").addEventListener("click", closeStudentChemModal);
   $("#student-chem-backdrop").addEventListener("click", closeStudentChemModal);
+  $("#scm-absent").addEventListener("change", syncStudentChemGradeDisabled);
+  $("#scm-grade").addEventListener("change", () => {
+    if ($("#scm-grade").value) $("#scm-absent").checked = false;
+    syncStudentChemGradeDisabled();
+  });
   $("#scm-save").addEventListener("click", () => {
     if (!editingStudentKey) return;
     const raw = $("#scm-grade").value;
-    const lessonGrade = raw === "" ? null : Number(raw);
     const absent = $("#scm-absent").checked;
+    const lessonGrade =
+      absent || raw === "" ? null : Number(raw);
     apiPut(
       `/api/teacher/classes/${encodeURIComponent(tClassId)}/chemistry-day/${encodeURIComponent(
         tDiaryDate
