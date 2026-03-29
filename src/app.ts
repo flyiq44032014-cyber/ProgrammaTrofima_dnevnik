@@ -5,6 +5,7 @@ import path from "path";
 import { requireParent, requireTeacher } from "./middleware/auth";
 import { apiRouter } from "./routes/api";
 import { authRouter } from "./routes/auth";
+import { profileRouter } from "./routes/profile";
 import { teacherRouter } from "./routes/teacher";
 
 const app = express();
@@ -33,6 +34,7 @@ app.use("/api", (_req, res, next) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/profile", profileRouter);
 app.use("/api/teacher", requireTeacher, teacherRouter);
 app.use("/api", requireParent, apiRouter);
 

@@ -236,14 +236,21 @@ async function run(): Promise<void> {
 
     await c.query(`DELETE FROM users`);
     await c.query(
-      `INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3), ($4, $5, $6)`,
+      `INSERT INTO users (email, password_hash, role, last_name, first_name, patronymic)
+       VALUES ($1, $2, $3, $4, $5, $6), ($7, $8, $9, $10, $11, $12)`,
       [
         "roditel@yandex.ru",
         bcrypt.hashSync("1234", 10),
         "parent",
+        "Демо",
+        "Родитель",
+        "",
         "uchitel@yandex.ru",
         bcrypt.hashSync("0987", 10),
         "teacher",
+        "Демо",
+        "Учитель",
+        "",
       ]
     );
 

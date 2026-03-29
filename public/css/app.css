@@ -298,6 +298,39 @@ body.mode-teacher .topbar__nutrition {
   outline-offset: 2px;
 }
 
+.topbar__profile-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.btn-profile {
+  box-sizing: border-box;
+  min-height: 38px;
+  height: 38px;
+  padding: 0 12px;
+  min-width: 120px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-profile:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.btn-profile:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
 .topbar__logout-wrap {
   display: flex;
   flex-direction: column;
@@ -443,6 +476,209 @@ body.mode-teacher .topbar__nutrition {
 
 .auth-register-extra[hidden] {
   display: none !important;
+}
+
+/* ——— Профиль ——— */
+.profile-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 190;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.profile-modal[hidden] {
+  display: none !important;
+}
+
+.profile-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 24, 40, 0.45);
+}
+
+.profile-modal__sheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  max-height: min(88vh, 640px);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 18px 16px calc(16px + env(safe-area-inset-bottom, 0));
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.profile-modal__h {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.profile-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.profile-avatar {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--blue-soft), var(--blue));
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  letter-spacing: 0.02em;
+}
+
+.profile-head__text {
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-fio {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.profile-email-line {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 4px;
+  word-break: break-all;
+}
+
+.profile-section__title {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.profile-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+}
+
+.profile-list li {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f4f7fc;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.profile-list li .profile-list__sub {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.profile-add {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-add__row--plus {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.profile-add__row--plus .profile-add__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-add__label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.profile-add__input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  border: 1px solid #d8e0f0;
+  font: inherit;
+  font-size: 0.92rem;
+  box-sizing: border-box;
+}
+
+.profile-add__label--narrow .profile-add__input {
+  max-width: 120px;
+}
+
+.profile-icon-plus {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  margin-bottom: 1px;
+}
+
+.profile-icon-plus:hover {
+  filter: brightness(1.05);
+}
+
+.profile-icon-plus:focus-visible {
+  outline: 2px solid var(--blue-soft);
+  outline-offset: 2px;
+}
+
+.profile-modal__err {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: #b71c1c;
+}
+
+.profile-modal__actions {
+  margin-top: 16px;
+}
+
+.profile-modal__close-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: #eef1f6;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text);
+}
+
+@media (min-width: 480px) {
+  .profile-modal {
+    align-items: center;
+    padding: 16px;
+  }
+
+  .profile-modal__sheet {
+    border-radius: 16px;
+  }
 }
 
 .auth-modal__h {

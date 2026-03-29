@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <title>Электронный дневник</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.2.1" />
+    <link rel="stylesheet" href="/css/app.css?v=1.2.3" />
   </head>
   <body>
     <div id="app-announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -105,6 +105,10 @@
         <div class="topbar__nutrition">
           <span class="topbar__ctrl-hint" aria-hidden="true">&#8203;</span>
           <button type="button" class="btn-nutrition" id="open-nutrition">Питание</button>
+        </div>
+        <div class="topbar__profile-wrap">
+          <span class="topbar__ctrl-hint" aria-hidden="true">&#8203;</span>
+          <button type="button" class="btn-profile" id="open-profile">Профиль</button>
         </div>
         <div class="topbar__logout-wrap">
           <span class="topbar__ctrl-hint" aria-hidden="true">&#8203;</span>
@@ -461,7 +465,7 @@
         <div class="teacher-head card card--paper">
           <div class="teacher-head__title" id="teacher-profile">—</div>
           <p class="teacher-head__hint">
-            Класс выбирается в шапке. На вкладке «Дневник» видны уроки: редактировать можно только химию. Таблица ниже — оценки и посещаемость на уроке химии за выбранный день.
+            Класс выбирается в шапке. На вкладке «Журнал» видны уроки: редактировать можно только химию. Таблица ниже — оценки и посещаемость на уроке химии за выбранный день.
           </p>
         </div>
 
@@ -558,7 +562,7 @@
           <span class="bn-ico" aria-hidden="true"
             ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-diary" /></svg
           ></span>
-          <span>Дневник</span>
+          <span>Журнал</span>
         </button>
         <button type="button" class="bn-item" data-teacher-tab="pupil">
           <span class="bn-ico" aria-hidden="true"
@@ -663,6 +667,71 @@
     </div>
     </div>
 
+    <div id="profile-modal" class="profile-modal" hidden>
+      <div class="profile-modal__backdrop" id="profile-backdrop"></div>
+      <div
+        class="profile-modal__sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-modal-title"
+      >
+        <h2 id="profile-modal-title" class="profile-modal__h">Профиль</h2>
+        <div class="profile-head">
+          <div class="profile-avatar" id="profile-avatar" aria-hidden="true">?</div>
+          <div class="profile-head__text">
+            <div class="profile-fio" id="profile-fio-line">—</div>
+            <div class="profile-email-line" id="profile-email-line"></div>
+          </div>
+        </div>
+        <div id="profile-parent-section" class="profile-section" hidden>
+          <h3 class="profile-section__title">Дети</h3>
+          <ul id="profile-children-list" class="profile-list"></ul>
+          <div class="profile-add">
+            <div class="profile-add__row profile-add__row--plus">
+              <label class="profile-add__label"
+                >Фамилия
+                <input type="text" id="prof-child-last" class="profile-add__input" autocomplete="family-name" />
+              </label>
+              <button type="button" class="profile-icon-plus" id="prof-child-add" title="Добавить ребёнка">+</button>
+            </div>
+            <label class="profile-add__label"
+              >Имя
+              <input type="text" id="prof-child-first" class="profile-add__input" autocomplete="given-name" />
+            </label>
+            <label class="profile-add__label"
+              >Отчество
+              <input type="text" id="prof-child-pat" class="profile-add__input" autocomplete="additional-name" />
+            </label>
+            <label class="profile-add__label"
+              >Класс
+              <input type="text" id="prof-child-class" class="profile-add__input" placeholder="напр. 3 Б" />
+            </label>
+          </div>
+        </div>
+        <div id="profile-teacher-section" class="profile-section" hidden>
+          <h3 class="profile-section__title">Классы</h3>
+          <ul id="profile-classes-list" class="profile-list"></ul>
+          <div class="profile-add">
+            <div class="profile-add__row profile-add__row--plus">
+              <label class="profile-add__label"
+                >Класс
+                <input type="text" id="prof-class-label" class="profile-add__input" placeholder="напр. 8 А" />
+              </label>
+              <button type="button" class="profile-icon-plus" id="prof-class-add" title="Добавить класс">+</button>
+            </div>
+            <label class="profile-add__label profile-add__label--narrow"
+              >Параллель (класс)
+              <input type="number" id="prof-class-grade" class="profile-add__input" placeholder="8" min="1" max="11" />
+            </label>
+          </div>
+        </div>
+        <p id="profile-modal-error" class="profile-modal__err" role="alert" hidden></p>
+        <div class="profile-modal__actions">
+          <button type="button" class="profile-modal__close-btn" id="profile-close">Закрыть</button>
+        </div>
+      </div>
+    </div>
+
     <div id="auth-modal" class="auth-modal" hidden>
       <div class="auth-modal__backdrop" id="auth-backdrop"></div>
       <div class="auth-modal__sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title">
@@ -723,6 +792,6 @@
       </div>
     </div>
 
-    <script src="/js/app.js?v=1.2.1" defer></script>
+    <script src="/js/app.js?v=1.2.3" defer></script>
   </body>
 </html>

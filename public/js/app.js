@@ -743,6 +743,188 @@
     }
   }
 
+  function profileInitials(lastName, firstName, patronymic) {
+    const L = (lastName || "").trim();
+    const F = (firstName || "").trim();
+    let s = "";
+    if (L) s += L[0].toUpperCase();
+    if (F) s += F[0].toUpperCase();
+    const P = (patronymic || "").trim();
+    if (!s && P) s = P[0].toUpperCase();
+    return s || "?";
+  }
+
+  function setProfileError(msg) {
+    const el = $("#profile-modal-error");
+    if (!el) return;
+    if (msg) {
+      el.textContent = msg;
+      el.hidden = false;
+    } else {
+      el.textContent = "";
+      el.hidden = true;
+    }
+  }
+
+  function closeProfileModal() {
+    removeFocusTrap();
+    const m = $("#profile-modal");
+    if (m) m.hidden = true;
+  }
+
+  function renderProfileData(data) {
+    const fioLine = $("#profile-fio-line");
+    const emailLine = $("#profile-email-line");
+    const av = $("#profile-avatar");
+    const secP = $("#profile-parent-section");
+    const secT = $("#profile-teacher-section");
+    const parts = [data.lastName, data.firstName, data.patronymic].filter(
+      (x) => String(x || "").trim()
+    );
+    if (fioLine) fioLine.textContent = parts.length ? parts.join(" ") : "—";
+    if (emailLine) emailLine.textContent = data.email || "";
+    if (av) {
+      av.textContent = profileInitials(
+        data.lastName,
+        data.firstName,
+        data.patronymic
+      );
+    }
+    if (secP) secP.hidden = data.role !== "parent";
+    if (secT) secT.hidden = data.role !== "teacher";
+
+    const chList = $("#profile-children-list");
+    if (chList && data.role === "parent") {
+      chList.innerHTML = "";
+      (data.children || []).forEach((c) => {
+        const li = document.createElement("li");
+        const nm = [c.lastName, c.firstName, c.patronymic]
+          .map((x) => String(x || "").trim())
+          .filter(Boolean)
+          .join(" ");
+        li.textContent = nm;
+        const sub = document.createElement("span");
+        sub.className = "profile-list__sub";
+        sub.textContent = c.classLabel || "";
+        li.appendChild(sub);
+        chList.appendChild(li);
+      });
+    }
+
+    const clList = $("#profile-classes-list");
+    if (clList && data.role === "teacher") {
+      clList.innerHTML = "";
+      (data.teacherClasses || []).forEach((c) => {
+        const li = document.createElement("li");
+        li.textContent = c.label;
+        if (c.grade != null && c.grade !== "") {
+          const sub = document.createElement("span");
+          sub.className = "profile-list__sub";
+          sub.textContent = `Параллель: ${c.grade}`;
+          li.appendChild(sub);
+        }
+        clList.appendChild(li);
+      });
+    }
+  }
+
+  function openProfileModal() {
+    setProfileError("");
+    const m = $("#profile-modal");
+    api("/api/profile")
+      .then((data) => {
+        renderProfileData(data);
+        if (m) {
+          m.hidden = false;
+          installFocusTrap(m, closeProfileModal);
+        }
+      })
+      .catch((err) => {
+        announceStatus(getApiErrorMessage(err));
+      });
+  }
+
+  function submitProfileAddChild() {
+    setProfileError("");
+    const lastEl = $("#prof-child-last");
+    const firstEl = $("#prof-child-first");
+    const patEl = $("#prof-child-pat");
+    const clsEl = $("#prof-child-class");
+    const last = lastEl ? String(lastEl.value).trim() : "";
+    const first = firstEl ? String(firstEl.value).trim() : "";
+    const pat = patEl ? String(patEl.value).trim() : "";
+    const cls = clsEl ? String(clsEl.value).trim() : "";
+    if (!last || !first || !cls) {
+      setProfileError("Заполните фамилию, имя и класс.");
+      return;
+    }
+    apiPost("/api/profile/children", {
+      lastName: last,
+      firstName: first,
+      patronymic: pat,
+      classLabel: cls,
+    })
+      .then((body) => {
+        const chList = $("#profile-children-list");
+        if (chList && body.child) {
+          const c = body.child;
+          const li = document.createElement("li");
+          const nm = [c.lastName, c.firstName, c.patronymic]
+            .map((x) => String(x || "").trim())
+            .filter(Boolean)
+            .join(" ");
+          li.textContent = nm;
+          const sub = document.createElement("span");
+          sub.className = "profile-list__sub";
+          sub.textContent = c.classLabel || "";
+          li.appendChild(sub);
+          chList.appendChild(li);
+        }
+        if (lastEl) lastEl.value = "";
+        if (firstEl) firstEl.value = "";
+        if (patEl) patEl.value = "";
+        if (clsEl) clsEl.value = "";
+      })
+      .catch((err) => setProfileError(getApiErrorMessage(err)));
+  }
+
+  function submitProfileAddClass() {
+    setProfileError("");
+    const lblEl = $("#prof-class-label");
+    const grEl = $("#prof-class-grade");
+    const label = lblEl ? String(lblEl.value).trim() : "";
+    if (!label) {
+      setProfileError("Укажите название класса.");
+      return;
+    }
+    const gradeRaw = grEl && grEl.value !== "" ? String(grEl.value).trim() : "";
+    /** @type {Record<string, string | number>} */
+    const payload = { label };
+    if (gradeRaw !== "") {
+      const n = Number(gradeRaw);
+      if (Number.isFinite(n)) payload.grade = n;
+    }
+    apiPost("/api/profile/classes", payload)
+      .then((body) => {
+        const clList = $("#profile-classes-list");
+        if (clList && body.class) {
+          const c = body.class;
+          const li = document.createElement("li");
+          li.textContent = c.label;
+          if (c.grade != null && c.grade !== "") {
+            const sub = document.createElement("span");
+            sub.className = "profile-list__sub";
+            sub.textContent = `Параллель: ${c.grade}`;
+            li.appendChild(sub);
+          }
+          clList.appendChild(li);
+        }
+        if (lblEl) lblEl.value = "";
+        if (grEl) grEl.value = "";
+      })
+      .catch((err) => setProfileError(getApiErrorMessage(err)));
+  }
+
   function hideAllAppModals() {
     removeFocusTrap();
     [
@@ -754,6 +936,7 @@
       "lesson-modal",
       "picker",
       "auth-modal",
+      "profile-modal",
     ].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.hidden = true;

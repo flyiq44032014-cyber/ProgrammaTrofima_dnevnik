@@ -112,3 +112,27 @@ CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users (lower(email));
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS patronymic TEXT;
+
+CREATE TABLE IF NOT EXISTS user_parent_children (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  last_name TEXT NOT NULL,
+  first_name TEXT NOT NULL,
+  patronymic TEXT NOT NULL DEFAULT ''::text,
+  class_label TEXT NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_parent_children_user ON user_parent_children (user_id);
+
+CREATE TABLE IF NOT EXISTS user_teacher_classes (
+  id SERIAL PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  grade INT,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_teacher_classes_user ON user_teacher_classes (user_id);
