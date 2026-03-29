@@ -1146,3 +1146,16 @@ export function getGradeHistoryForSubject(
 export function getFinals(childId: string): FinalsPayload | null {
   return finalsByChild[childId] ?? null;
 }
+
+/** Снимок данных для загрузки в PostgreSQL (seed) */
+export function getSeedSnapshot() {
+  return {
+    children,
+    diaryByChild,
+    performanceByChild,
+    gradeHistorySummary,
+    gradeHistoryDetail,
+    finalsByChild,
+    gradeHistoryBySubject,
+  };
+}
