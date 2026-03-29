@@ -136,6 +136,32 @@
     });
   }
 
+  const MODAL_MOTION_CLASS = "modal-motion";
+  const LANDING_MOTION_CLASS = "landing-motion";
+
+  /** Сброс и повторное добавление класса — иначе CSS-animation у листа часто не стартует после display:none у родителя. */
+  function beginModalMotion(root) {
+    if (!root) return;
+    root.classList.remove(MODAL_MOTION_CLASS);
+    void root.offsetWidth;
+    requestAnimationFrame(() => {
+      root.classList.add(MODAL_MOTION_CLASS);
+    });
+  }
+
+  function endModalMotion(root) {
+    if (root) root.classList.remove(MODAL_MOTION_CLASS);
+  }
+
+  function playLandingMotion(root) {
+    if (!root || root.hidden) return;
+    root.classList.remove(LANDING_MOTION_CLASS);
+    void root.offsetWidth;
+    requestAnimationFrame(() => {
+      root.classList.add(LANDING_MOTION_CLASS);
+    });
+  }
+
   function showModalFieldError(el, text) {
     if (!el) return;
     if (!text) {
@@ -232,11 +258,13 @@
 
   function closePickerModal() {
     removeFocusTrap();
+    endModalMotion($("#picker"));
     $("#picker").hidden = true;
   }
 
   function closeTPupilPicker() {
     removeFocusTrap();
+    endModalMotion($("#t-pupil-picker"));
     $("#t-pupil-picker").hidden = true;
   }
 
@@ -323,6 +351,7 @@
         const p = list.querySelector("p");
         if (p) p.textContent = msg;
         $("#picker").hidden = false;
+        beginModalMotion($("#picker"));
         installFocusTrap($("#picker"), closePickerModal);
       });
   }
@@ -562,12 +591,14 @@
     $("#lm-grade").value =
       lesson.grade != null && lesson.grade !== "" ? String(lesson.grade) : "";
     $("#lesson-modal").hidden = false;
+    beginModalMotion($("#lesson-modal"));
     installFocusTrap($("#lesson-modal"), closeLessonModal);
   }
 
   function closeLessonModal() {
     removeFocusTrap();
     showModalFieldError($("#lm-form-error"), "");
+    endModalMotion($("#lesson-modal"));
     $("#lesson-modal").hidden = true;
     editingLesson = null;
   }
@@ -610,7 +641,10 @@
   function closeAuthModal() {
     removeFocusTrap();
     const m = $("#auth-modal");
-    if (m) m.hidden = true;
+    if (m) {
+      endModalMotion(m);
+      m.hidden = true;
+    }
   }
 
   function openAuthModal() {
@@ -625,6 +659,7 @@
     const m = $("#auth-modal");
     if (m) {
       m.hidden = false;
+      beginModalMotion(m);
       installFocusTrap(m, closeAuthModal);
     }
   }
@@ -722,6 +757,7 @@
         renderProfileData(data);
         if (m) {
           m.hidden = false;
+          beginModalMotion(m);
           installFocusTrap(m, closeProfileModal);
         }
       })
@@ -827,7 +863,10 @@
       "profile-modal",
     ].forEach((id) => {
       const el = document.getElementById(id);
-      if (el) el.hidden = true;
+      if (el) {
+        endModalMotion(el);
+        el.hidden = true;
+      }
     });
     editingLesson = null;
     editingStudentKey = null;
@@ -837,7 +876,10 @@
     hideAllAppModals();
     const landing = $("#shell-landing");
     const app = $("#shell-app");
-    if (landing) landing.hidden = false;
+    if (landing) {
+      landing.hidden = false;
+      playLandingMotion(landing);
+    }
     if (app) app.hidden = true;
     document.body.classList.add("auth-landing");
   }
@@ -845,7 +887,10 @@
   function showMainApp() {
     const landing = $("#shell-landing");
     const app = $("#shell-app");
-    if (landing) landing.hidden = true;
+    if (landing) {
+      landing.classList.remove(LANDING_MOTION_CLASS);
+      landing.hidden = true;
+    }
     if (app) app.hidden = false;
     document.body.classList.remove("auth-landing");
   }
@@ -1037,6 +1082,7 @@
     const modal = $("#t-cal-modal");
     if (modal) {
       modal.hidden = false;
+      beginModalMotion(modal);
       installFocusTrap(modal, closeTeacherCalendar);
     }
   }
@@ -1044,7 +1090,10 @@
   function closeTeacherCalendar() {
     removeFocusTrap();
     const modal = $("#t-cal-modal");
-    if (modal) modal.hidden = true;
+    if (modal) {
+      endModalMotion(modal);
+      modal.hidden = true;
+    }
   }
 
   function setTeacherTab(next) {
@@ -1130,12 +1179,14 @@
       s.absent || s.lessonGrade == null ? "" : String(s.lessonGrade);
     syncStudentChemGradeDisabled();
     $("#student-chem-modal").hidden = false;
+    beginModalMotion($("#student-chem-modal"));
     installFocusTrap($("#student-chem-modal"), closeStudentChemModal);
   }
 
   function closeStudentChemModal() {
     removeFocusTrap();
     showModalFieldError($("#scm-form-error"), "");
+    endModalMotion($("#student-chem-modal"));
     $("#student-chem-modal").hidden = true;
     editingStudentKey = null;
   }
@@ -1659,6 +1710,7 @@
     const pup = $("#t-pupil-picker");
     if (pup) {
       pup.hidden = false;
+      beginModalMotion(pup);
       installFocusTrap(pup, closeTPupilPicker);
     }
   });

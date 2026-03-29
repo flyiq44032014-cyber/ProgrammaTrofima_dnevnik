@@ -110,11 +110,13 @@ body.auth-landing {
   }
 }
 
-/* ——— Лёгкие UI-анимации (модалки, лендинг, таббар) ——— */
+/* ——— Лёгкие UI-анимации (модалки, лендинг, таббар) ———
+   Класс .modal-motion вешается из app.js после показа — иначе анимация
+   часто не стартует у потомков после снятия hidden (display:none) у родителя. */
 @keyframes ui-sheet-enter {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(36px);
   }
   to {
     opacity: 1;
@@ -134,25 +136,25 @@ body.auth-landing {
 @keyframes ui-landing-enter {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(18px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shell-landing:not([hidden]) .landing-title,
-  .shell-landing:not([hidden]) .landing-enter,
-  .auth-modal:not([hidden]) .auth-modal__backdrop,
-  .auth-modal:not([hidden]) .auth-modal__sheet,
-  .profile-modal:not([hidden]) .profile-modal__backdrop,
-  .profile-modal:not([hidden]) .profile-modal__sheet,
-  .picker:not([hidden]) .picker__backdrop,
-  .picker:not([hidden]) .picker__sheet,
-  .lesson-modal:not([hidden]) .lesson-modal__backdrop,
-  .lesson-modal:not([hidden]) .lesson-modal__sheet {
+  .shell-landing.landing-motion .landing-title,
+  .shell-landing.landing-motion .landing-enter,
+  .auth-modal.modal-motion .auth-modal__backdrop,
+  .auth-modal.modal-motion .auth-modal__sheet,
+  .profile-modal.modal-motion .profile-modal__backdrop,
+  .profile-modal.modal-motion .profile-modal__sheet,
+  .picker.modal-motion .picker__backdrop,
+  .picker.modal-motion .picker__sheet,
+  .lesson-modal.modal-motion .lesson-modal__backdrop,
+  .lesson-modal.modal-motion .lesson-modal__sheet {
     animation: none !important;
   }
 
@@ -386,12 +388,12 @@ body.auth-landing {
     calc(28px + env(safe-area-inset-bottom, 0));
 }
 
-.shell-landing:not([hidden]) .landing-title {
-  animation: ui-landing-enter 0.42s ease-out both;
+.shell-landing.landing-motion .landing-title {
+  animation: ui-landing-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.shell-landing:not([hidden]) .landing-enter {
-  animation: ui-landing-enter 0.42s ease-out 0.07s both;
+.shell-landing.landing-motion .landing-enter {
+  animation: ui-landing-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
 }
 
 .shell-landing[hidden] {
@@ -455,8 +457,8 @@ body.auth-landing {
   background: rgba(20, 24, 40, 0.5);
 }
 
-.auth-modal:not([hidden]) .auth-modal__backdrop {
-  animation: ui-backdrop-enter 0.22s ease-out both;
+.auth-modal.modal-motion .auth-modal__backdrop {
+  animation: ui-backdrop-enter 0.26s ease-out both;
 }
 
 .auth-modal__sheet {
@@ -470,8 +472,8 @@ body.auth-landing {
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
 }
 
-.auth-modal:not([hidden]) .auth-modal__sheet {
-  animation: ui-sheet-enter 0.28s ease-out both;
+.auth-modal.modal-motion .auth-modal__sheet {
+  animation: ui-sheet-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .auth-tabs {
@@ -523,6 +525,10 @@ body.auth-landing {
   background: rgba(20, 24, 40, 0.45);
 }
 
+.profile-modal.modal-motion .profile-modal__backdrop {
+  animation: ui-backdrop-enter 0.26s ease-out both;
+}
+
 .profile-modal__sheet {
   position: relative;
   z-index: 1;
@@ -534,6 +540,10 @@ body.auth-landing {
   border-radius: 16px 16px 0 0;
   padding: 18px 16px calc(16px + env(safe-area-inset-bottom, 0));
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.profile-modal.modal-motion .profile-modal__sheet {
+  animation: ui-sheet-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .profile-modal__h {
@@ -1610,12 +1620,12 @@ button.t-cal-cell--day.is-selected {
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2);
 }
 
-.picker:not([hidden]) .picker__backdrop {
-  animation: ui-backdrop-enter 0.2s ease-out both;
+.picker.modal-motion .picker__backdrop {
+  animation: ui-backdrop-enter 0.24s ease-out both;
 }
 
-.picker:not([hidden]) .picker__sheet {
-  animation: ui-sheet-enter 0.26s ease-out both;
+.picker.modal-motion .picker__sheet {
+  animation: ui-sheet-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .picker__title {
@@ -2047,8 +2057,8 @@ body.mode-teacher .bottomnav:not(.bottomnav--teacher) {
   box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
 }
 
-.lesson-modal:not([hidden]) .lesson-modal__sheet {
-  animation: ui-sheet-enter 0.28s ease-out both;
+.lesson-modal.modal-motion .lesson-modal__sheet {
+  animation: ui-sheet-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .lesson-modal__h {
