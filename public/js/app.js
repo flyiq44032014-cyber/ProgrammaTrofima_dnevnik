@@ -19,7 +19,11 @@
   /** @type {string | null} */
   let expandedGradeDate = null;
 
-  const ROLE_KEY = "dnevnik_role";
+  const AUTH_KEY = "dnevnik_auth";
+  const AUTH_ACCOUNTS = [
+    { login: "roditel", password: "1234", role: "parent" },
+    { login: "uchitel", password: "0987", role: "teacher" },
+  ];
   /** @type {'parent' | 'teacher'} */
   let appRole = "parent";
   /** @type {string} */
@@ -681,11 +685,95 @@
     editingLesson = null;
   }
 
+  function readAuthSession() {
+    try {
+      const raw = sessionStorage.getItem(AUTH_KEY);
+      if (!raw) return null;
+      const o = JSON.parse(raw);
+      if (o && (o.role === "parent" || o.role === "teacher")) return o;
+    } catch (_) {}
+    return null;
+  }
+
+  function writeAuthSession(role, login) {
+    try {
+      sessionStorage.setItem(AUTH_KEY, JSON.stringify({ role, login: login || "" }));
+    } catch (_) {}
+  }
+
+  function tryAuthLogin(loginRaw, passwordRaw) {
+    const login = String(loginRaw || "").trim().toLowerCase();
+    const password = String(passwordRaw || "").trim();
+    const acc = AUTH_ACCOUNTS.find((a) => a.login === login && a.password === password);
+    return acc ? acc.role : null;
+  }
+
+  function closeAuthModal() {
+    removeFocusTrap();
+    const m = $("#auth-modal");
+    if (m) m.hidden = true;
+  }
+
+  function openAuthModal() {
+    const err = $("#auth-error");
+    if (err) {
+      err.textContent = "";
+      err.hidden = true;
+    }
+    const f = $("#auth-form");
+    if (f) f.reset();
+    const m = $("#auth-modal");
+    if (m) {
+      m.hidden = false;
+      installFocusTrap(m, closeAuthModal);
+    }
+  }
+
+  function hideAllAppModals() {
+    removeFocusTrap();
+    [
+      "nutrition-modal",
+      "nut-transfer-modal",
+      "t-cal-modal",
+      "t-pupil-picker",
+      "student-chem-modal",
+      "lesson-modal",
+      "picker",
+      "auth-modal",
+    ].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.hidden = true;
+    });
+    editingLesson = null;
+    editingStudentKey = null;
+  }
+
+  function showLanding() {
+    hideAllAppModals();
+    const landing = $("#shell-landing");
+    const app = $("#shell-app");
+    if (landing) landing.hidden = false;
+    if (app) app.hidden = true;
+    document.body.classList.add("auth-landing");
+  }
+
+  function showMainApp() {
+    const landing = $("#shell-landing");
+    const app = $("#shell-app");
+    if (landing) landing.hidden = true;
+    if (app) app.hidden = false;
+    document.body.classList.remove("auth-landing");
+  }
+
+  function logout() {
+    try {
+      sessionStorage.removeItem(AUTH_KEY);
+    } catch (_) {}
+    showLanding();
+  }
+
   function applyRole(role) {
     appRole = role === "teacher" ? "teacher" : "parent";
-    try {
-      localStorage.setItem(ROLE_KEY, appRole);
-    } catch (_) {}
 
     const shellP = $("#shell-parent");
     const shellT = $("#shell-teacher");
@@ -718,6 +806,20 @@
         $("#hdr-name").textContent = cur.name;
         $("#hdr-class").textContent = cur.classLabel;
       }
+    }
+  }
+
+  function bootstrapAfterLogin(role) {
+    applyRole(role === "teacher" ? "teacher" : "parent");
+    if (role === "teacher") {
+      initTeacherShell();
+    } else {
+      loadChildren()
+        .then(() => loadDiaryMeta())
+        .then(() => {
+          loadDiary();
+          setTab("diary");
+        });
     }
   }
 
@@ -1664,37 +1766,35 @@
       });
   });
 
-  const roleSelect = $("#role-switch");
-  try {
-    const saved = localStorage.getItem(ROLE_KEY);
-    if (saved === "teacher" || saved === "parent") roleSelect.value = saved;
-  } catch (_) {}
-  applyRole(roleSelect.value === "teacher" ? "teacher" : "parent");
-
-  roleSelect.addEventListener("change", () => {
-    const v = roleSelect.value === "teacher" ? "teacher" : "parent";
-    applyRole(v);
-    if (v === "teacher") initTeacherShell();
-    else {
-      loadChildren()
-        .then(() => loadDiaryMeta())
-        .then(() => {
-          if (tab === "diary") loadDiary();
-          if (tab === "performance") setTab("performance");
-          if (tab === "finals") loadFinals();
-          if (tab === "meetings") loadParentMeetings();
-        });
+  $("#open-auth").addEventListener("click", () => openAuthModal());
+  $("#auth-cancel").addEventListener("click", () => closeAuthModal());
+  $("#auth-backdrop").addEventListener("click", () => closeAuthModal());
+  $("#auth-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const loginIn = $("#auth-login");
+    const passIn = $("#auth-password");
+    const err = $("#auth-error");
+    const role = tryAuthLogin(loginIn && loginIn.value, passIn && passIn.value);
+    if (!role) {
+      if (err) {
+        err.textContent = "Неверный логин или пароль.";
+        err.hidden = false;
+      }
+      return;
     }
+    const loginRaw = loginIn ? String(loginIn.value).trim() : "";
+    writeAuthSession(role, loginRaw);
+    closeAuthModal();
+    showMainApp();
+    bootstrapAfterLogin(role);
   });
+  $("#btn-logout").addEventListener("click", () => logout());
 
-  if (appRole === "teacher") {
-    initTeacherShell();
+  const sess = readAuthSession();
+  if (sess) {
+    showMainApp();
+    bootstrapAfterLogin(sess.role);
   } else {
-    loadChildren()
-      .then(() => loadDiaryMeta())
-      .then(() => {
-        loadDiary();
-        setTab("diary");
-      });
+    showLanding();
   }
 })();

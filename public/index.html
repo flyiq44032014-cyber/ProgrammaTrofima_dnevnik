@@ -6,11 +6,16 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <title>Электронный дневник</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.1.7" />
+    <link rel="stylesheet" href="/css/app.css?v=1.1.8" />
   </head>
   <body>
     <div id="app-announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
     <div class="app-bg" aria-hidden="true"></div>
+
+    <div id="shell-landing" class="shell-landing">
+      <h1 class="landing-title">Электронный дневник</h1>
+      <button type="button" class="landing-enter" id="open-auth">Вход</button>
+    </div>
 
     <svg xmlns="http://www.w3.org/2000/svg" class="bn-icons-sprite" aria-hidden="true" focusable="false">
       <defs>
@@ -79,6 +84,7 @@
       </defs>
     </svg>
 
+    <div id="shell-app" class="shell-app" hidden>
     <div id="picker" class="picker" hidden>
       <div class="picker__backdrop"></div>
       <div class="picker__sheet" role="dialog" aria-labelledby="picker-title">
@@ -100,12 +106,9 @@
           <span class="topbar__ctrl-hint" aria-hidden="true">&#8203;</span>
           <button type="button" class="btn-nutrition" id="open-nutrition">Питание</button>
         </div>
-        <div class="topbar__role">
-          <label class="topbar__role-label" for="role-switch">Режим</label>
-          <select id="role-switch" class="role-select" aria-label="Родитель или учитель">
-            <option value="parent">Родитель</option>
-            <option value="teacher">Учитель</option>
-          </select>
+        <div class="topbar__logout-wrap">
+          <span class="topbar__ctrl-hint" aria-hidden="true">&#8203;</span>
+          <button type="button" class="btn-logout" id="btn-logout">Выход</button>
         </div>
       </div>
     </header>
@@ -552,19 +555,27 @@
 
       <nav class="bottomnav bottomnav--teacher" id="teacher-bottomnav" aria-label="Разделы учителя" hidden>
         <button type="button" class="bn-item is-active" data-teacher-tab="diary">
-          <span class="bn-ico bn-ico--book" aria-hidden="true"></span>
+          <span class="bn-ico" aria-hidden="true"
+            ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-diary" /></svg
+          ></span>
           <span>Дневник</span>
         </button>
         <button type="button" class="bn-item" data-teacher-tab="pupil">
-          <span class="bn-ico bn-ico--chart" aria-hidden="true"></span>
+          <span class="bn-ico" aria-hidden="true"
+            ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-chart" /></svg
+          ></span>
           <span>Успеваемость</span>
         </button>
         <button type="button" class="bn-item" data-teacher-tab="tmeet">
-          <span class="bn-ico bn-ico--people" aria-hidden="true"></span>
+          <span class="bn-ico" aria-hidden="true"
+            ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-people" /></svg
+          ></span>
           <span>Собрание</span>
         </button>
         <button type="button" class="bn-item" data-teacher-tab="quarters">
-          <span class="bn-ico bn-ico--list" aria-hidden="true"></span>
+          <span class="bn-ico" aria-hidden="true"
+            ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-list" /></svg
+          ></span>
           <span>Итоговые</span>
         </button>
       </nav>
@@ -650,7 +661,35 @@
         </form>
       </div>
     </div>
+    </div>
 
-    <script src="/js/app.js?v=1.1.7" defer></script>
+    <div id="auth-modal" class="auth-modal" hidden>
+      <div class="auth-modal__backdrop" id="auth-backdrop"></div>
+      <div class="auth-modal__sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <h2 id="auth-title" class="auth-modal__h">Вход в систему</h2>
+        <form id="auth-form" class="auth-form">
+          <label class="auth-field"
+            >Логин
+            <input type="text" id="auth-login" name="login" autocomplete="username" required />
+          </label>
+          <label class="auth-field"
+            >Пароль
+            <input type="password" id="auth-password" name="password" autocomplete="current-password" required />
+          </label>
+          <p class="auth-hints">
+            <strong>Для учебных целей:</strong><br />
+            Родитель — логин <code>Roditel</code>, пароль <code>1234</code><br />
+            Учитель — логин <code>Uchitel</code>, пароль <code>0987</code>
+          </p>
+          <p id="auth-error" class="auth-error" role="alert" hidden></p>
+          <div class="auth-actions">
+            <button type="button" class="auth-cancel" id="auth-cancel">Отмена</button>
+            <button type="submit" class="auth-submit">Войти</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="/js/app.js?v=1.1.9" defer></script>
   </body>
 </html>
