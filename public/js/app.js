@@ -2019,6 +2019,17 @@
   });
   $("#btn-logout").addEventListener("click", () => logout());
 
+  const openProf = $("#open-profile");
+  if (openProf) openProf.addEventListener("click", () => openProfileModal());
+  const profClose = $("#profile-close");
+  if (profClose) profClose.addEventListener("click", () => closeProfileModal());
+  const profBd = $("#profile-backdrop");
+  if (profBd) profBd.addEventListener("click", () => closeProfileModal());
+  const profChAdd = $("#prof-child-add");
+  if (profChAdd) profChAdd.addEventListener("click", () => submitProfileAddChild());
+  const profClAdd = $("#prof-class-add");
+  if (profClAdd) profClAdd.addEventListener("click", () => submitProfileAddClass());
+
   fetch("/api/auth/me", fetchCred)
     .then((r) => (r.ok ? r.json() : null))
     .then((data) => {
