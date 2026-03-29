@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <title>Электронный дневник</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.2.3" />
+    <link rel="stylesheet" href="/css/app.css?v=1.2.6" />
   </head>
   <body>
     <div id="app-announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -102,10 +102,6 @@
         </button>
       </div>
       <div class="topbar__right-cluster">
-        <div class="topbar__nutrition">
-          <span class="topbar__ctrl-hint" aria-hidden="true">&#8203;</span>
-          <button type="button" class="btn-nutrition" id="open-nutrition">Питание</button>
-        </div>
         <div class="topbar__profile-wrap">
           <span class="topbar__ctrl-hint" aria-hidden="true">&#8203;</span>
           <button type="button" class="btn-profile" id="open-profile">Профиль</button>
@@ -219,219 +215,6 @@
         </div>
       </section>
     </main>
-
-    <div id="nutrition-modal" class="nutrition-modal" hidden>
-      <div class="nutrition-modal__backdrop" id="nutrition-backdrop"></div>
-      <div
-        class="nutrition-modal__panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="nut-header-name"
-        tabindex="-1"
-      >
-        <header class="nut-maroon">
-          <button type="button" class="nut-back" id="nut-back" aria-label="Назад">‹</button>
-          <div class="nut-maroon__titles">
-            <span id="nut-header-name" class="nut-maroon__name">Питание</span>
-            <span id="nut-header-class" class="nut-maroon__class" hidden></span>
-          </div>
-        </header>
-        <div class="nut-subbar">
-          <button type="button" class="nut-subbar__menu" id="nut-menu-btn" aria-label="Меню">
-            <span class="nut-hamburger" aria-hidden="true"></span>
-          </button>
-          <span class="nut-subbar__school">МБОУ «Великодворская СОШ»</span>
-          <span class="nut-subbar__parent"><span class="nut-subbar__avatar" aria-hidden="true">●</span> Ястребова Н. Е.</span>
-        </div>
-
-        <div class="nut-scroll">
-          <div id="nut-step-pick" class="nut-step">
-            <div class="nut-card">
-              <div class="nut-profile-row">
-                <span class="nut-profile-year">3 Б 2025/2026</span>
-                <div class="nut-profile-ico" aria-hidden="true"></div>
-                <div class="nut-profile-text">
-                  <span class="nut-profile-name">Ястребова Н. А.</span>
-                  <span class="nut-profile-account">Лицевой счёт: 169108</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="nut-card nut-notify">
-              <div class="nut-notify__title">Уведомления</div>
-              <div class="nut-notify__row">
-                <span class="nut-notify-bell" aria-hidden="true"></span>
-                <button type="button" class="nut-notify-pill" id="nut-notify-unread">Непрочитанных: 14</button>
-              </div>
-            </div>
-            <button type="button" class="nut-expand nut-stub">РАЗВЕРНУТЬ ОПИСАНИЕ</button>
-
-            <div class="nut-card">
-              <h3 class="nut-card-title">Баланс всех детей</h3>
-              <button type="button" class="nut-balance-row nut-child-pick" data-nut-child="nika">
-                <span class="nut-balance-name">Ястребова Н. А.</span>
-                <span class="nut-balance-sum">640.00 руб.</span>
-              </button>
-              <button type="button" class="nut-balance-row nut-child-pick" data-nut-child="efrem">
-                <span class="nut-balance-name">Ястребов Е.</span>
-                <span class="nut-balance-sum">560.00 руб.</span>
-              </button>
-              <button type="button" class="nut-btn-main nut-open-transfer">ПЕРЕВОД МЕЖДУ СЧЕТАМИ</button>
-            </div>
-
-            <div class="nut-pick-extra" aria-label="Дополнительная информация">
-              <div class="nut-strip-muted">Нет данных</div>
-
-              <div class="nut-card">
-                <div class="nut-detail-beige">
-                  <div class="nut-preview-label">Баланс:</div>
-                  <div class="nut-pick-detail-balance nut-detail-big">640.00 руб.</div>
-                  <button type="button" class="nut-btn-main nut-stub">ПОПОЛНИТЬ БАЛАНС</button>
-                  <button type="button" class="nut-link-refund nut-stub">ОФОРМИТЬ ВОЗВРАТ</button>
-                </div>
-                <label class="nut-toggle-row">
-                  <input type="checkbox" id="nut-toggle-balance-pick" />
-                  <span>Уведомлять о снижении баланса</span>
-                </label>
-                <div class="nut-info-lines">
-                  <p>Социальная выплата: <span class="nut-txt-green">100.00 руб.</span></p>
-                  <p>Кредит разрешён: <span class="nut-txt-red">Нет</span></p>
-                  <p>Кредитный лимит: <strong>1000.00 руб.</strong></p>
-                </div>
-              </div>
-
-              <h2 class="nut-section-title">Сегодня в меню</h2>
-              <div class="nut-info-banner">
-                <span class="nut-info-ico" aria-hidden="true">ⓘ</span>
-                <span>Данная таблица носит сугубо информационный характер</span>
-              </div>
-              <div class="nut-placeholder-box">Нет данных</div>
-
-              <h2 class="nut-section-title">Навигация</h2>
-              <nav class="nut-nav-list" aria-label="Разделы питания (обзор)">
-                <button type="button" class="nut-nav-item nut-stub">
-                  <span class="nut-nav-ico" aria-hidden="true">📦</span>
-                  <span class="nut-nav-label">Заказ питания</span>
-                  <span class="nut-nav-chev" aria-hidden="true">›</span>
-                </button>
-                <button type="button" class="nut-nav-item nut-stub">
-                  <span class="nut-nav-ico" aria-hidden="true">📅</span>
-                  <span class="nut-nav-label">История питания</span>
-                  <span class="nut-nav-chev" aria-hidden="true">›</span>
-                </button>
-                <button type="button" class="nut-nav-item nut-stub">
-                  <span class="nut-nav-ico" aria-hidden="true">💰</span>
-                  <span class="nut-nav-label">История оплат и возвратов</span>
-                  <span class="nut-nav-chev" aria-hidden="true">›</span>
-                </button>
-                <button type="button" class="nut-nav-item nut-stub">
-                  <span class="nut-nav-ico" aria-hidden="true">📖</span>
-                  <span class="nut-nav-label">Руководство пользователя</span>
-                  <span class="nut-nav-chev" aria-hidden="true">›</span>
-                </button>
-              </nav>
-            </div>
-          </div>
-
-          <div id="nut-step-detail" class="nut-step" hidden>
-            <div class="nut-strip-muted">Нет данных</div>
-
-            <div class="nut-card">
-              <h3 class="nut-card-title">Баланс всех детей</h3>
-              <div class="nut-balance-row nut-balance-row--static">
-                <span class="nut-balance-name">Ястребова Н. А.</span>
-                <span class="nut-balance-sum">640.00 руб.</span>
-              </div>
-              <div class="nut-balance-row nut-balance-row--static">
-                <span class="nut-balance-name">Ястребов Е.</span>
-                <span class="nut-balance-sum">560.00 руб.</span>
-              </div>
-              <button type="button" class="nut-btn-main nut-open-transfer">ПЕРЕВОД МЕЖДУ СЧЕТАМИ</button>
-            </div>
-
-            <div class="nut-card">
-              <div class="nut-detail-beige">
-                <div class="nut-preview-label">Баланс:</div>
-                <div id="nut-detail-balance" class="nut-detail-big">640.00 руб.</div>
-                <button type="button" class="nut-btn-main nut-stub">ПОПОЛНИТЬ БАЛАНС</button>
-                <button type="button" class="nut-link-refund nut-stub">ОФОРМИТЬ ВОЗВРАТ</button>
-              </div>
-              <label class="nut-toggle-row">
-                <input type="checkbox" id="nut-toggle-balance" />
-                <span>Уведомлять о снижении баланса</span>
-              </label>
-              <div class="nut-info-lines">
-                <p>Социальная выплата: <span class="nut-txt-green">100.00 руб.</span></p>
-                <p>Кредит разрешён: <span class="nut-txt-red">Нет</span></p>
-                <p>Кредитный лимит: <strong>1000.00 руб.</strong></p>
-              </div>
-            </div>
-
-            <h2 class="nut-section-title">Сегодня в меню</h2>
-            <div class="nut-info-banner">
-              <span class="nut-info-ico" aria-hidden="true">ⓘ</span>
-              <span>Данная таблица носит сугубо информационный характер</span>
-            </div>
-            <div class="nut-placeholder-box">Нет данных</div>
-
-            <h2 class="nut-section-title">Навигация</h2>
-            <nav class="nut-nav-list" aria-label="Разделы питания">
-              <button type="button" class="nut-nav-item nut-stub">
-                <span class="nut-nav-ico" aria-hidden="true">📦</span>
-                <span class="nut-nav-label">Заказ питания</span>
-                <span class="nut-nav-chev" aria-hidden="true">›</span>
-              </button>
-              <button type="button" class="nut-nav-item nut-stub">
-                <span class="nut-nav-ico" aria-hidden="true">📅</span>
-                <span class="nut-nav-label">История питания</span>
-                <span class="nut-nav-chev" aria-hidden="true">›</span>
-              </button>
-              <button type="button" class="nut-nav-item nut-stub">
-                <span class="nut-nav-ico" aria-hidden="true">💰</span>
-                <span class="nut-nav-label">История оплат и возвратов</span>
-                <span class="nut-nav-chev" aria-hidden="true">›</span>
-              </button>
-              <button type="button" class="nut-nav-item nut-stub">
-                <span class="nut-nav-ico" aria-hidden="true">📖</span>
-                <span class="nut-nav-label">Руководство пользователя</span>
-                <span class="nut-nav-chev" aria-hidden="true">›</span>
-              </button>
-            </nav>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="nut-transfer-modal" class="nut-transfer-modal" hidden>
-      <div class="nut-transfer-backdrop" id="nut-transfer-backdrop"></div>
-      <div class="nut-transfer-sheet" role="dialog" aria-labelledby="nut-tr-title" aria-modal="true">
-        <h2 class="nut-transfer-title" id="nut-tr-title">Перевод между счетами</h2>
-        <p class="nut-transfer-hint">Демо: перевод не выполняется, проверьте сумму и счета.</p>
-        <label class="nut-transfer-field"
-          >Со счёта ребёнка
-          <select id="nut-tr-from" class="nut-transfer-input">
-            <option value="nika">Ястребова Ника (640.00 ₽)</option>
-            <option value="efrem">Ястребов Ефрем (560.00 ₽)</option>
-          </select>
-        </label>
-        <label class="nut-transfer-field"
-          >На счёт ребёнка
-          <select id="nut-tr-to" class="nut-transfer-input">
-            <option value="efrem">Ястребов Ефрем (560.00 ₽)</option>
-            <option value="nika">Ястребова Ника (640.00 ₽)</option>
-          </select>
-        </label>
-        <label class="nut-transfer-field"
-          >Сумма, руб.
-          <input id="nut-tr-amount" class="nut-transfer-input" type="number" min="0.01" step="0.01" placeholder="0.00" />
-        </label>
-        <p id="nut-tr-error" class="nut-transfer-err" role="alert" hidden></p>
-        <div class="nut-transfer-actions">
-          <button type="button" class="nut-transfer-cancel" id="nut-tr-cancel">Отмена</button>
-          <button type="button" class="nut-transfer-submit" id="nut-tr-submit">Перевести</button>
-        </div>
-      </div>
-    </div>
 
     <nav class="bottomnav" aria-label="Разделы">
       <button type="button" class="bn-item is-active" data-tab="diary">
@@ -810,6 +593,6 @@
       </div>
     </div>
 
-    <script src="/js/app.js?v=1.2.5" defer></script>
+    <script src="/js/app.js?v=1.2.6" defer></script>
   </body>
 </html>

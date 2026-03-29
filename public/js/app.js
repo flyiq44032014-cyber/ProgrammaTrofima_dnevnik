@@ -240,120 +240,6 @@
     $("#t-pupil-picker").hidden = true;
   }
 
-  const NUTRITION_CHILDREN = {
-    nika: {
-      name: "Ястребова Ника",
-      classLabel: "3 Б класс",
-      balance: "640.00",
-    },
-    efrem: {
-      name: "Ястребов Ефрем",
-      classLabel: "6 А класс",
-      balance: "560.00",
-    },
-  };
-
-  /** @type {'pick' | 'detail'} */
-  let nutPhase = "pick";
-
-  function nutGoBackOrClose() {
-    const tr = $("#nut-transfer-modal");
-    if (tr && tr.hidden === false) {
-      closeNutritionTransferModal();
-      return;
-    }
-    if (nutPhase === "detail") showNutritionPick();
-    else closeNutritionModal();
-  }
-
-  function closeNutritionModal() {
-    const tr = $("#nut-transfer-modal");
-    if (tr) tr.hidden = true;
-    removeFocusTrap();
-    const m = $("#nutrition-modal");
-    if (m) m.hidden = true;
-    nutPhase = "pick";
-  }
-
-  function syncNutritionTransferSelectors() {
-    const fromEl = $("#nut-tr-from");
-    const toEl = $("#nut-tr-to");
-    if (!fromEl || !toEl) return;
-    const from = fromEl.value;
-    toEl.querySelectorAll("option").forEach((o) => {
-      o.disabled = o.value === from;
-    });
-    if (toEl.value === from) {
-      toEl.value = from === "nika" ? "efrem" : "nika";
-    }
-  }
-
-  function openNutritionTransferModal() {
-    const tm = $("#nut-transfer-modal");
-    if (!tm) return;
-    const err = $("#nut-tr-error");
-    const amt = $("#nut-tr-amount");
-    if (err) err.hidden = true;
-    if (amt) amt.value = "";
-    removeFocusTrap();
-    tm.hidden = false;
-    syncNutritionTransferSelectors();
-    installFocusTrap(tm, closeNutritionTransferModal);
-  }
-
-  function closeNutritionTransferModal() {
-    removeFocusTrap();
-    const tr = $("#nut-transfer-modal");
-    if (tr) tr.hidden = true;
-    const nm = $("#nutrition-modal");
-    if (nm && nm.hidden === false) installFocusTrap(nm, nutGoBackOrClose);
-  }
-
-  function showNutritionPick() {
-    nutPhase = "pick";
-    const pick = $("#nut-step-pick");
-    const detail = $("#nut-step-detail");
-    const hName = $("#nut-header-name");
-    const hClass = $("#nut-header-class");
-    if (pick) pick.hidden = false;
-    if (detail) detail.hidden = true;
-    if (hName) hName.textContent = "Питание";
-    if (hClass) {
-      hClass.textContent = "";
-      hClass.hidden = true;
-    }
-  }
-
-  function showNutritionDetail(childId) {
-    const ch = NUTRITION_CHILDREN[childId];
-    if (!ch) return;
-    nutPhase = "detail";
-    const pick = $("#nut-step-pick");
-    const detail = $("#nut-step-detail");
-    const hName = $("#nut-header-name");
-    const hClass = $("#nut-header-class");
-    const balEl = $("#nut-detail-balance");
-    if (pick) pick.hidden = true;
-    if (detail) detail.hidden = false;
-    if (hName) hName.textContent = ch.name;
-    if (hClass) {
-      hClass.textContent = ch.classLabel;
-      hClass.hidden = false;
-    }
-    if (balEl) balEl.textContent = `${ch.balance} руб.`;
-    const scroll = $(".nut-scroll", $("#nutrition-modal"));
-    if (scroll) scroll.scrollTop = 0;
-  }
-
-  function openNutritionModal() {
-    if (appRole !== "parent") return;
-    showNutritionPick();
-    const m = $("#nutrition-modal");
-    if (!m) return;
-    m.hidden = false;
-    installFocusTrap(m, nutGoBackOrClose);
-  }
-
   function setTab(next) {
     tab = next;
     document.querySelectorAll(".view").forEach((v) => v.classList.add("view--hidden"));
@@ -932,8 +818,6 @@
   function hideAllAppModals() {
     removeFocusTrap();
     [
-      "nutrition-modal",
-      "nut-transfer-modal",
       "t-cal-modal",
       "t-pupil-picker",
       "student-chem-modal",
@@ -984,8 +868,6 @@
     const op = $("#open-picker");
 
     if (appRole === "teacher") {
-      const nm = $("#nutrition-modal");
-      if (nm && nm.hidden === false) closeNutritionModal();
       document.body.classList.add("mode-teacher");
       shellP.classList.add("view--hidden");
       shellT.classList.remove("view--hidden");
@@ -1713,103 +1595,6 @@
   $("#open-picker").addEventListener("click", openPicker);
   $("#picker-close").addEventListener("click", closePickerModal);
   $(".picker__backdrop").addEventListener("click", closePickerModal);
-
-  const openNutr = $("#open-nutrition");
-  if (openNutr) openNutr.addEventListener("click", openNutritionModal);
-  const nutBack = $("#nut-back");
-  if (nutBack) nutBack.addEventListener("click", nutGoBackOrClose);
-  const nutBd = $("#nutrition-backdrop");
-  if (nutBd) nutBd.addEventListener("click", nutGoBackOrClose);
-  const nutModal = $("#nutrition-modal");
-  if (nutModal) {
-    nutModal.addEventListener("click", (e) => {
-      const row = e.target.closest(".nut-child-pick");
-      if (row) {
-        const id = row.getAttribute("data-nut-child");
-        if (id) showNutritionDetail(id);
-        return;
-      }
-      if (e.target.closest(".nut-open-transfer")) {
-        e.preventDefault();
-        openNutritionTransferModal();
-        return;
-      }
-      if (e.target.closest(".nut-stub")) {
-        e.preventDefault();
-        e.stopPropagation();
-        const btn = e.target.closest(".nut-stub");
-        const navLab = btn && btn.querySelector(".nut-nav-label");
-        const part = navLab
-          ? `«${navLab.textContent.trim()}»`
-          : btn && btn.textContent
-            ? `«${btn.textContent.replace(/\s+/g, " ").trim()}»`
-            : "Эта функция";
-        nutritionStubAlert(`${part} в разработке.`);
-      }
-    });
-  }
-
-  function nutritionStubAlert(dtl) {
-    const text = `Временная заглушка.\n\n${dtl}`;
-    announceStatus(text);
-    window.alert(text);
-  }
-
-  const nutMenuBtn = $("#nut-menu-btn");
-  if (nutMenuBtn) {
-    nutMenuBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      nutritionStubAlert("Меню (три полоски) пока не подключено.");
-    });
-  }
-  const nutUnread = $("#nut-notify-unread");
-  if (nutUnread) {
-    nutUnread.addEventListener("click", (e) => {
-      e.stopPropagation();
-      nutritionStubAlert("Непрочитанные уведомления: раздел в разработке.");
-    });
-  }
-
-  const nutTrFrom = $("#nut-tr-from");
-  if (nutTrFrom) nutTrFrom.addEventListener("change", syncNutritionTransferSelectors);
-
-  const nutTrCancel = $("#nut-tr-cancel");
-  const nutTrBd = $("#nut-transfer-backdrop");
-  if (nutTrCancel) nutTrCancel.addEventListener("click", closeNutritionTransferModal);
-  if (nutTrBd) nutTrBd.addEventListener("click", closeNutritionTransferModal);
-
-  const nutTrSubmit = $("#nut-tr-submit");
-  if (nutTrSubmit) {
-    nutTrSubmit.addEventListener("click", () => {
-      const from = $("#nut-tr-from") && $("#nut-tr-from").value;
-      const to = $("#nut-tr-to") && $("#nut-tr-to").value;
-      const raw = $("#nut-tr-amount") && $("#nut-tr-amount").value;
-      const amt = parseFloat(String(raw).replace(",", "."));
-      const err = $("#nut-tr-error");
-      if (!from || !to) return;
-      if (from === to) {
-        if (err) {
-          err.textContent = "Выберите разных детей";
-          err.hidden = false;
-        }
-        return;
-      }
-      if (!(amt > 0)) {
-        if (err) {
-          err.textContent = "Введите сумму больше нуля";
-          err.hidden = false;
-        }
-        return;
-      }
-      if (err) err.hidden = true;
-      const fromName = (NUTRITION_CHILDREN[from] && NUTRITION_CHILDREN[from].name) || from;
-      const toName = (NUTRITION_CHILDREN[to] && NUTRITION_CHILDREN[to].name) || to;
-      const msg = `Демо: перевод не выполняется. ${fromName} → ${toName}: ${amt.toFixed(2)} руб.`;
-      announceStatus(msg);
-      alert(msg);
-      closeNutritionTransferModal();
-    });
-  }
 
   $("#grades-back").addEventListener("click", () => {
     perfSubview = "chart";
