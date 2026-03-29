@@ -15,7 +15,7 @@ import {
 
 const children: Child[] = [
   { id: "nika", name: "Ястребова Ника", classLabel: "3 Б класс" },
-  { id: "efrem", name: "Ястребова Ефрем", classLabel: "6 А класс" },
+  { id: "efrem", name: "Ястребов Ефрем", classLabel: "6 А класс" },
   {
     id: "demo8a",
     name: "Класс 8 А (родитель)",

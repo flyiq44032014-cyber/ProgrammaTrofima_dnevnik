@@ -235,6 +235,79 @@
     $("#t-pupil-picker").hidden = true;
   }
 
+  const NUTRITION_CHILDREN = {
+    nika: {
+      name: "Ястребова Ника",
+      classLabel: "3 Б класс",
+      balance: "640.00",
+    },
+    efrem: {
+      name: "Ястребов Ефрем",
+      classLabel: "6 А класс",
+      balance: "560.00",
+    },
+  };
+
+  /** @type {'pick' | 'detail'} */
+  let nutPhase = "pick";
+
+  function nutGoBackOrClose() {
+    if (nutPhase === "detail") showNutritionPick();
+    else closeNutritionModal();
+  }
+
+  function closeNutritionModal() {
+    removeFocusTrap();
+    const m = $("#nutrition-modal");
+    if (m) m.hidden = true;
+    nutPhase = "pick";
+  }
+
+  function showNutritionPick() {
+    nutPhase = "pick";
+    const pick = $("#nut-step-pick");
+    const detail = $("#nut-step-detail");
+    const hName = $("#nut-header-name");
+    const hClass = $("#nut-header-class");
+    if (pick) pick.hidden = false;
+    if (detail) detail.hidden = true;
+    if (hName) hName.textContent = "Питание";
+    if (hClass) {
+      hClass.textContent = "";
+      hClass.hidden = true;
+    }
+  }
+
+  function showNutritionDetail(childId) {
+    const ch = NUTRITION_CHILDREN[childId];
+    if (!ch) return;
+    nutPhase = "detail";
+    const pick = $("#nut-step-pick");
+    const detail = $("#nut-step-detail");
+    const hName = $("#nut-header-name");
+    const hClass = $("#nut-header-class");
+    const balEl = $("#nut-detail-balance");
+    if (pick) pick.hidden = true;
+    if (detail) detail.hidden = false;
+    if (hName) hName.textContent = ch.name;
+    if (hClass) {
+      hClass.textContent = ch.classLabel;
+      hClass.hidden = false;
+    }
+    if (balEl) balEl.textContent = `${ch.balance} руб.`;
+    const scroll = $(".nut-scroll", $("#nutrition-modal"));
+    if (scroll) scroll.scrollTop = 0;
+  }
+
+  function openNutritionModal() {
+    if (appRole !== "parent") return;
+    showNutritionPick();
+    const m = $("#nutrition-modal");
+    if (!m) return;
+    m.hidden = false;
+    installFocusTrap(m, nutGoBackOrClose);
+  }
+
   function setTab(next) {
     tab = next;
     document.querySelectorAll(".view").forEach((v) => v.classList.add("view--hidden"));
@@ -580,6 +653,8 @@
     const op = $("#open-picker");
 
     if (appRole === "teacher") {
+      const nm = $("#nutrition-modal");
+      if (nm && nm.hidden === false) closeNutritionModal();
       document.body.classList.add("mode-teacher");
       shellP.classList.add("view--hidden");
       shellT.classList.remove("view--hidden");
@@ -1293,6 +1368,28 @@
   $("#open-picker").addEventListener("click", openPicker);
   $("#picker-close").addEventListener("click", closePickerModal);
   $(".picker__backdrop").addEventListener("click", closePickerModal);
+
+  const openNutr = $("#open-nutrition");
+  if (openNutr) openNutr.addEventListener("click", openNutritionModal);
+  const nutBack = $("#nut-back");
+  if (nutBack) nutBack.addEventListener("click", nutGoBackOrClose);
+  const nutBd = $("#nutrition-backdrop");
+  if (nutBd) nutBd.addEventListener("click", nutGoBackOrClose);
+  const nutModal = $("#nutrition-modal");
+  if (nutModal) {
+    nutModal.addEventListener("click", (e) => {
+      const row = e.target.closest(".nut-child-pick");
+      if (row) {
+        const id = row.getAttribute("data-nut-child");
+        if (id) showNutritionDetail(id);
+        return;
+      }
+      if (e.target.closest(".nut-stub")) {
+        e.preventDefault();
+        announceStatus("Временная заглушка: функция в разработке");
+      }
+    });
+  }
 
   $("#grades-back").addEventListener("click", () => {
     perfSubview = "chart";
