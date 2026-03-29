@@ -1432,21 +1432,37 @@
       }
       if (e.target.closest(".nut-stub")) {
         e.preventDefault();
-        announceStatus("Временная заглушка: функция в разработке");
+        e.stopPropagation();
+        const btn = e.target.closest(".nut-stub");
+        const navLab = btn && btn.querySelector(".nut-nav-label");
+        const part = navLab
+          ? `«${navLab.textContent.trim()}»`
+          : btn && btn.textContent
+            ? `«${btn.textContent.replace(/\s+/g, " ").trim()}»`
+            : "Эта функция";
+        nutritionStubAlert(`${part} в разработке.`);
       }
     });
   }
 
+  function nutritionStubAlert(dtl) {
+    const text = `Временная заглушка.\n\n${dtl}`;
+    announceStatus(text);
+    window.alert(text);
+  }
+
   const nutMenuBtn = $("#nut-menu-btn");
   if (nutMenuBtn) {
-    nutMenuBtn.addEventListener("click", () => {
-      announceStatus("Меню: временная заглушка");
+    nutMenuBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      nutritionStubAlert("Меню (три полоски) пока не подключено.");
     });
   }
   const nutUnread = $("#nut-notify-unread");
   if (nutUnread) {
-    nutUnread.addEventListener("click", () => {
-      announceStatus("Уведомления: временная заглушка");
+    nutUnread.addEventListener("click", (e) => {
+      e.stopPropagation();
+      nutritionStubAlert("Непрочитанные уведомления: раздел в разработке.");
     });
   }
 
