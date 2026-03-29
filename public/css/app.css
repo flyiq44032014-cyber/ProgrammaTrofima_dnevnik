@@ -110,6 +110,58 @@ body.auth-landing {
   }
 }
 
+/* ——— Лёгкие UI-анимации (модалки, лендинг, таббар) ——— */
+@keyframes ui-sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ui-backdrop-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-landing-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-landing:not([hidden]) .landing-title,
+  .shell-landing:not([hidden]) .landing-enter,
+  .auth-modal:not([hidden]) .auth-modal__backdrop,
+  .auth-modal:not([hidden]) .auth-modal__sheet,
+  .profile-modal:not([hidden]) .profile-modal__backdrop,
+  .profile-modal:not([hidden]) .profile-modal__sheet,
+  .picker:not([hidden]) .picker__backdrop,
+  .picker:not([hidden]) .picker__sheet,
+  .lesson-modal:not([hidden]) .lesson-modal__backdrop,
+  .lesson-modal:not([hidden]) .lesson-modal__sheet {
+    animation: none !important;
+  }
+
+  .bn-item,
+  .bn-ico {
+    transition: none !important;
+  }
+}
+
 .skeleton-row .sk-text {
   display: block;
   height: 13px;
@@ -334,6 +386,14 @@ body.auth-landing {
     calc(28px + env(safe-area-inset-bottom, 0));
 }
 
+.shell-landing:not([hidden]) .landing-title {
+  animation: ui-landing-enter 0.42s ease-out both;
+}
+
+.shell-landing:not([hidden]) .landing-enter {
+  animation: ui-landing-enter 0.42s ease-out 0.07s both;
+}
+
 .shell-landing[hidden] {
   display: none !important;
 }
@@ -395,6 +455,10 @@ body.auth-landing {
   background: rgba(20, 24, 40, 0.5);
 }
 
+.auth-modal:not([hidden]) .auth-modal__backdrop {
+  animation: ui-backdrop-enter 0.22s ease-out both;
+}
+
 .auth-modal__sheet {
   position: relative;
   z-index: 1;
@@ -404,6 +468,10 @@ body.auth-landing {
   border-radius: 16px 16px 0 0;
   padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0));
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.auth-modal:not([hidden]) .auth-modal__sheet {
+  animation: ui-sheet-enter 0.28s ease-out both;
 }
 
 .auth-tabs {
@@ -1477,6 +1545,11 @@ button.t-cal-cell--day.is-selected {
   cursor: pointer;
   padding: 4px 2px;
   max-width: 96px;
+  transition: color 0.2s ease, transform 0.12s ease;
+}
+
+.bn-item:active {
+  transform: scale(0.97);
 }
 
 .bn-item + .bn-item {
@@ -1487,17 +1560,19 @@ button.t-cal-cell--day.is-selected {
   color: #fff;
 }
 
-.bn-item.is-active .bn-ico {
-  background: rgba(100, 150, 255, 0.35);
-  box-shadow: 0 0 12px rgba(120, 170, 255, 0.45);
-}
-
 .bn-ico {
   width: 36px;
   height: 36px;
   border-radius: 12px;
   display: grid;
   place-items: center;
+  transition: background 0.22s ease, box-shadow 0.22s ease, transform 0.15s ease;
+}
+
+.bn-item.is-active .bn-ico {
+  background: rgba(100, 150, 255, 0.35);
+  box-shadow: 0 0 12px rgba(120, 170, 255, 0.45);
+  transform: scale(1.04);
 }
 
 .bn-ico-svg {
@@ -1533,18 +1608,14 @@ button.t-cal-cell--day.is-selected {
   border-radius: 16px 16px 0 0;
   padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0));
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2);
-  animation: up 0.22s ease;
 }
 
-@keyframes up {
-  from {
-    transform: translateY(20px);
-    opacity: 0.85;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+.picker:not([hidden]) .picker__backdrop {
+  animation: ui-backdrop-enter 0.2s ease-out both;
+}
+
+.picker:not([hidden]) .picker__sheet {
+  animation: ui-sheet-enter 0.26s ease-out both;
 }
 
 .picker__title {
@@ -1959,6 +2030,10 @@ body.mode-teacher .bottomnav:not(.bottomnav--teacher) {
   background: rgba(20, 24, 40, 0.45);
 }
 
+.lesson-modal:not([hidden]) .lesson-modal__backdrop {
+  animation: ui-backdrop-enter 0.22s ease-out both;
+}
+
 .lesson-modal__sheet {
   position: relative;
   z-index: 1;
@@ -1970,6 +2045,10 @@ body.mode-teacher .bottomnav:not(.bottomnav--teacher) {
   border-radius: 16px 16px 0 0;
   padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0));
   box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+}
+
+.lesson-modal:not([hidden]) .lesson-modal__sheet {
+  animation: ui-sheet-enter 0.28s ease-out both;
 }
 
 .lesson-modal__h {
