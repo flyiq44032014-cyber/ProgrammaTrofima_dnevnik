@@ -85,7 +85,7 @@
     };
     $(map[next]).classList.remove("view--hidden");
 
-    document.querySelectorAll(".bn-item").forEach((b) => {
+    document.querySelectorAll(".bottomnav:not(.bottomnav--teacher) .bn-item").forEach((b) => {
       b.classList.toggle("is-active", b.dataset.tab === next);
     });
 
@@ -407,6 +407,7 @@
     const op = $("#open-picker");
 
     if (appRole === "teacher") {
+      document.body.classList.add("mode-teacher");
       shellP.classList.add("view--hidden");
       shellT.classList.remove("view--hidden");
       shellT.removeAttribute("hidden");
@@ -415,6 +416,7 @@
       if (op) op.hidden = false;
       document.body.style.paddingBottom = "calc(72px + env(safe-area-inset-bottom, 0))";
     } else {
+      document.body.classList.remove("mode-teacher");
       shellP.classList.remove("view--hidden");
       shellT.classList.add("view--hidden");
       shellT.setAttribute("hidden", "");
@@ -484,7 +486,8 @@
     const sec = $(map[next]);
     if (sec) sec.classList.remove("view--hidden");
     document.querySelectorAll("#teacher-bottomnav .bn-item").forEach((b) => {
-      b.classList.toggle("is-active", b.dataset.tTab === next);
+      const tab = b.getAttribute("data-teacher-tab");
+      b.classList.toggle("is-active", tab === next);
     });
     if (next === "quarters") loadTeacherQuarterTable();
     if (next === "pupil" && tSelectedPupilKey) loadTutorPupilStats();
@@ -934,7 +937,7 @@
     });
   }
 
-  document.querySelectorAll(".bn-item").forEach((b) => {
+  document.querySelectorAll(".bottomnav:not(.bottomnav--teacher) .bn-item").forEach((b) => {
     b.addEventListener("click", () => {
       const next = b.dataset.tab;
       if (!next) return;
@@ -978,8 +981,9 @@
   });
 
   document.querySelectorAll("#teacher-bottomnav .bn-item").forEach((b) => {
-    b.addEventListener("click", () => {
-      const next = b.dataset.tTab;
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const next = b.getAttribute("data-teacher-tab");
       if (next) setTeacherTab(next);
     });
   });
