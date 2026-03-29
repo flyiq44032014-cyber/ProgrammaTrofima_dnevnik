@@ -44,3 +44,12 @@ export async function getFinals(childId: string) {
   if (useDb()) return db.getFinals(childId);
   return mem.getFinals(childId);
 }
+
+export async function getMeetingForChild(childId: string) {
+  if (useDb()) {
+    const fromDb = await db.getMeetingForChild(childId);
+    if (fromDb) return fromDb;
+    return mem.getMeetingForChild(childId);
+  }
+  return mem.getMeetingForChild(childId);
+}

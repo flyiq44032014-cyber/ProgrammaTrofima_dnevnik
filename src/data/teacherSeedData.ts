@@ -86,6 +86,11 @@ const week: { iso: string; weekday: string; monthGenitive: string }[] = [
   { iso: "2026-03-27", weekday: "Пятница", monthGenitive: "марта" },
 ];
 
+/** Даты учебной недели в демо-данных (дневник класса / химия) */
+export const TEACHER_WEEK_ISOS = week.map((w) => w.iso);
+
+export const CHEMISTRY_LESSON_TITLE = "Химия";
+
 function lessonsForDay(
   grade: number,
   iso: string,

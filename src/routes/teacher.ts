@@ -101,6 +101,127 @@ teacherRouter.get("/classes/:classId/diary", async (req, res) => {
   }
 });
 
+teacherRouter.get("/classes/:classId/chemistry-day/:isoDate", async (req, res) => {
+  const { classId, isoDate } = req.params;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+    res.status(400).json({ error: "Нужна дата YYYY-MM-DD" });
+    return;
+  }
+  try {
+    const roster = await rosterSafe(classId);
+    const day = await diaryDaySafe(classId, isoDate);
+    if (!day) {
+      res.status(404).json({ error: "Нет данных" });
+      return;
+    }
+    const sheet = mem.memGetChemistryDay(classId, isoDate, roster);
+    if (!sheet) {
+      res.status(404).json({ error: "Нет данных" });
+      return;
+    }
+    res.json(sheet);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+teacherRouter.put(
+  "/classes/:classId/chemistry-day/:isoDate/students/:studentKey",
+  async (req, res) => {
+    const { classId, isoDate, studentKey } = req.params;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+      res.status(400).json({ error: "Неверная дата" });
+      return;
+    }
+    const body = req.body as Record<string, unknown>;
+    const patch: { lessonGrade?: 2 | 3 | 4 | 5 | null; absent?: boolean } = {};
+    if (body.lessonGrade === null || body.lessonGrade === "")
+      patch.lessonGrade = null;
+    else if (typeof body.lessonGrade === "number") {
+      const g = body.lessonGrade;
+      if (![2, 3, 4, 5].includes(g)) {
+        res.status(400).json({ error: "Оценка 2–5 или пусто" });
+        return;
+      }
+      patch.lessonGrade = g as 2 | 3 | 4 | 5;
+    }
+    if (typeof body.absent === "boolean") patch.absent = body.absent;
+    try {
+      const roster = await rosterSafe(classId);
+      const ok = mem.memPatchChemStudent(
+        classId,
+        isoDate,
+        decodeURIComponent(studentKey),
+        roster.length,
+        patch
+      );
+      if (!ok) {
+        res.status(404).json({ error: "Ученик не найден" });
+        return;
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: "Ошибка сохранения" });
+    }
+  }
+);
+
+teacherRouter.get("/classes/:classId/students/:studentKey/stats", async (req, res) => {
+  const { classId, studentKey } = req.params;
+  try {
+    const roster = await rosterSafe(classId);
+    const stats = mem.memGetStudentStats(classId, decodeURIComponent(studentKey), roster);
+    if (!stats) {
+      res.status(404).json({ error: "Нет данных" });
+      return;
+    }
+    res.json(stats);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+teacherRouter.get("/classes/:classId/quarter-stats", async (req, res) => {
+  const { classId } = req.params;
+  try {
+    const roster = await rosterSafe(classId);
+    res.json(mem.memGetQuarterTable(classId, roster));
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+teacherRouter.post("/classes/:classId/meeting", async (req, res) => {
+  const { classId } = req.params;
+  const body = req.body as Record<string, unknown>;
+  const date = typeof body.date === "string" ? body.date : "";
+  const time = typeof body.time === "string" ? body.time : "";
+  const topic = typeof body.topic === "string" ? body.topic : "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    res.status(400).json({ error: "Нужна дата YYYY-MM-DD" });
+    return;
+  }
+  if (!time.trim()) {
+    res.status(400).json({ error: "Укажите время" });
+    return;
+  }
+  if (!topic.trim()) {
+    res.status(400).json({ error: "Укажите тему" });
+    return;
+  }
+  try {
+    mem.memSetMeeting(classId, { date, time: time.trim(), topic: topic.trim() });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
 teacherRouter.put(
   "/classes/:classId/diary/:isoDate/lessons/:lessonKey",
   async (req, res) => {

@@ -133,6 +133,17 @@ apiRouter.get("/children/:childId/finals", async (req, res) => {
   }
 });
 
+apiRouter.get("/children/:childId/meeting", async (req, res) => {
+  const { childId } = req.params;
+  try {
+    const meeting = await store.getMeetingForChild(childId);
+    res.json({ meeting });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Ошибка БД" });
+  }
+});
+
 apiRouter.use((_req, res) => {
   res.status(404).json({ error: "Не найдено" });
 });

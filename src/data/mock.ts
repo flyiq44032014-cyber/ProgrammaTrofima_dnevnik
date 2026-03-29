@@ -1,5 +1,6 @@
 import type {
   Child,
+  ClassMeetingAnnouncement,
   DiaryDay,
   FinalsPayload,
   GradeDayDetail,
@@ -9,6 +10,7 @@ import type {
 import {
   memGetClassDiary,
   memGetClassDiaryDates,
+  memGetMeeting,
 } from "./teacherMemory";
 
 const children: Child[] = [
@@ -1181,6 +1183,12 @@ export function getGradeHistoryForSubject(
 
 export function getFinals(childId: string): FinalsPayload | null {
   return finalsByChild[childId] ?? null;
+}
+
+export function getMeetingForChild(childId: string): ClassMeetingAnnouncement | null {
+  const ch = children.find((c) => c.id === childId);
+  if (!ch?.classScheduleId) return null;
+  return memGetMeeting(ch.classScheduleId);
 }
 
 /** Снимок данных для загрузки в PostgreSQL (seed) */

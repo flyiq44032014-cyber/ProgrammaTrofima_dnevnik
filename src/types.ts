@@ -77,6 +77,13 @@ export interface FinalRow {
   year?: number | null;
 }
 
+/** Объявление собрания для класса (видят родители с этим classScheduleId) */
+export interface ClassMeetingAnnouncement {
+  date: string;
+  time: string;
+  topic: string;
+}
+
 export interface FinalsPayload {
   yearLabel: string;
   rows: FinalRow[];

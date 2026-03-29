@@ -1,5 +1,6 @@
 import type {
   Child,
+  ClassMeetingAnnouncement,
   DiaryDay,
   FinalsPayload,
   GradeDayDetail,
@@ -218,4 +219,9 @@ export async function getFinals(childId: string): Promise<FinalsPayload | null> 
       year: r.year_grade === null ? null : Number(r.year_grade),
     })),
   };
+}
+
+/** Пока в БД нет таблицы собраний — заглушка; in-memory в mock/store. */
+export async function getMeetingForChild(_childId: string): Promise<ClassMeetingAnnouncement | null> {
+  return null;
 }

@@ -35,6 +35,14 @@
   /** @type {Record<string, unknown> | null} */
   let editingLesson = null;
 
+  const CHEM_SUBJ = "Химия";
+  /** @type {'diary' | 'pupil' | 'tmeet' | 'quarters'} */
+  let tTab = "diary";
+  /** @type {string | null} */
+  let editingStudentKey = null;
+  /** @type {string | null} */
+  let tSelectedPupilKey = null;
+
   const $ = (sel, root = document) => root.querySelector(sel);
 
   function api(path) {
@@ -47,6 +55,17 @@
   function apiPut(path, body) {
     return fetch(path, {
       method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => {
+      if (!r.ok) return r.json().then((j) => Promise.reject(j));
+      return r.json();
+    });
+  }
+
+  function apiPost(path, body) {
+    return fetch(path, {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).then((r) => {
@@ -79,6 +98,7 @@
     if (tab === "performance" && perfSubview === "grades") loadGradesList();
     if (tab === "finals") loadFinals();
     if (tab === "diary") loadDiary();
+    if (tab === "meetings") loadParentMeetings();
   }
 
   function openPicker() {
@@ -186,6 +206,7 @@
 
   function renderLesson(lesson, opts) {
     const teacherEdit = opts && opts.teacherEdit;
+    const onlyChemistry = opts && opts.onlyChemistry;
     const hasBlocks = Array.isArray(lesson.blocks) && lesson.blocks.length > 0;
     const detailsFromFields =
       !hasBlocks &&
@@ -278,7 +299,7 @@
 
     wrap.appendChild(top);
     if (hasBlocks || detailsFromFields) wrap.appendChild(body);
-    if (teacherEdit) {
+    if (teacherEdit && (!onlyChemistry || lesson.title === CHEM_SUBJ)) {
       const edit = document.createElement("button");
       edit.type = "button";
       edit.className = "lesson__edit";
@@ -321,23 +342,28 @@
 
     const shellP = $("#shell-parent");
     const shellT = $("#shell-teacher");
-    const nav = $(".bottomnav");
+    const nav = document.querySelector(".bottomnav:not(.bottomnav--teacher)");
+    const tnav = $("#teacher-bottomnav");
+    const op = $("#open-picker");
+    const tClassEl = $("#topbar-teacher-class");
 
     if (appRole === "teacher") {
       shellP.classList.add("view--hidden");
       shellT.classList.remove("view--hidden");
       shellT.removeAttribute("hidden");
       if (nav) nav.hidden = true;
-      const op = $("#open-picker");
+      if (tnav) tnav.hidden = false;
       if (op) op.hidden = true;
-      document.body.style.paddingBottom = "env(safe-area-inset-bottom, 0)";
+      if (tClassEl) tClassEl.hidden = false;
+      document.body.style.paddingBottom = "calc(72px + env(safe-area-inset-bottom, 0))";
     } else {
       shellP.classList.remove("view--hidden");
       shellT.classList.add("view--hidden");
       shellT.setAttribute("hidden", "");
       if (nav) nav.hidden = false;
-      const op = $("#open-picker");
+      if (tnav) tnav.hidden = true;
       if (op) op.hidden = false;
+      if (tClassEl) tClassEl.hidden = true;
       document.body.style.paddingBottom = "";
       const cur = children.find((c) => c.id === childId) || children[0];
       if (cur) {
@@ -347,36 +373,22 @@
     }
   }
 
-  function renderTeacherClassButtons() {
-    const box = $("#teacher-classes");
-    if (!box) return;
-    box.innerHTML = "";
+  function syncHdrClassSelect() {
+    const sel = $("#hdr-class-select");
+    if (!sel) return;
+    const prev = tClassId;
+    sel.innerHTML = "";
     teacherClasses.forEach((c) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "teacher-class-btn" + (c.id === tClassId ? " is-active" : "");
-      b.textContent = c.label;
-      b.addEventListener("click", () => {
-        tClassId = c.id;
-        renderTeacherClassButtons();
-        loadTeacherDiaryMeta().then(() => loadTeacherDiary());
-        loadTeacherRoster();
-      });
-      box.appendChild(b);
+      const o = document.createElement("option");
+      o.value = c.id;
+      o.textContent = c.label;
+      sel.appendChild(o);
     });
-  }
-
-  function loadTeacherRoster() {
-    api(`/api/teacher/classes/${encodeURIComponent(tClassId)}/roster`).then((d) => {
-      const ul = $("#teacher-roster");
-      if (!ul) return;
-      ul.innerHTML = "";
-      (d.names || []).forEach((name) => {
-        const li = document.createElement("li");
-        li.textContent = name;
-        ul.appendChild(li);
-      });
-    });
+    if (teacherClasses.some((c) => c.id === prev)) sel.value = prev;
+    else if (teacherClasses[0]) {
+      tClassId = teacherClasses[0].id;
+      sel.value = tClassId;
+    }
   }
 
   function updateTeacherDiaryNavState() {
@@ -412,6 +424,184 @@
     loadTeacherDiary();
   }
 
+  function setTeacherTab(next) {
+    tTab = next;
+    document.querySelectorAll(".t-view").forEach((v) => v.classList.add("view--hidden"));
+    const map = {
+      diary: "#t-view-diary",
+      pupil: "#t-view-pupil",
+      tmeet: "#t-view-tmeet",
+      quarters: "#t-view-quarters",
+    };
+    const sec = $(map[next]);
+    if (sec) sec.classList.remove("view--hidden");
+    document.querySelectorAll("#teacher-bottomnav .bn-item").forEach((b) => {
+      b.classList.toggle("is-active", b.dataset.tTab === next);
+    });
+    if (next === "quarters") loadTeacherQuarterTable();
+    if (next === "pupil" && tSelectedPupilKey) loadTutorPupilStats();
+    if (next === "tmeet") {
+      const di = $("#t-meeting-date");
+      const ti = $("#t-meeting-time");
+      if (di && !di.value) di.value = "2026-04-10";
+      if (ti && !ti.value) ti.value = "18:00";
+    }
+  }
+
+  function loadChemTable() {
+    const tbody = $("#t-chem-tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    api(
+      `/api/teacher/classes/${encodeURIComponent(tClassId)}/chemistry-day/${encodeURIComponent(
+        tDiaryDate
+      )}`
+    )
+      .then((d) => {
+        (d.students || []).forEach((s) => {
+          const tr = document.createElement("tr");
+          tr.dataset.studentKey = s.studentKey;
+          const tdN = document.createElement("td");
+          tdN.textContent = s.name;
+          const tdG = document.createElement("td");
+          tdG.textContent = s.lessonGrade != null ? String(s.lessonGrade) : "—";
+          const tdA = document.createElement("td");
+          tdA.textContent = s.absent ? "н" : "";
+          if (s.absent) tdA.classList.add("cell-miss");
+          tr.appendChild(tdN);
+          tr.appendChild(tdG);
+          tr.appendChild(tdA);
+          tr.addEventListener("click", () => openStudentChemModal(s));
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(() => {
+        tbody.innerHTML =
+          '<tr><td colspan="3" style="text-align:center;color:#6b7a90">Нет данных</td></tr>';
+      });
+  }
+
+  function openStudentChemModal(s) {
+    editingStudentKey = s.studentKey;
+    $("#scm-title").textContent = s.name;
+    $("#scm-grade").value = s.lessonGrade != null ? String(s.lessonGrade) : "";
+    $("#scm-absent").checked = Boolean(s.absent);
+    $("#student-chem-modal").hidden = false;
+  }
+
+  function closeStudentChemModal() {
+    $("#student-chem-modal").hidden = true;
+    editingStudentKey = null;
+  }
+
+  function loadTeacherQuarterTable() {
+    const thead = $("#t-quarters-thead");
+    const tbody = $("#t-quarters-tbody");
+    const hint = $("#t-quarter-hint");
+    if (!thead || !tbody) return;
+    api(`/api/teacher/classes/${encodeURIComponent(tClassId)}/quarter-stats`).then((d) => {
+      if (hint) {
+        hint.textContent = `Текущая четверть: ${d.currentQuarter}. Закрытые четверти — целая оценка; за текущую — средний балл с двумя знаками.`;
+      }
+      thead.innerHTML = `<tr><th>Фамилия Имя</th><th>1 ч.</th><th>2 ч.</th><th>3 ч.</th><th>4 ч.</th></tr>`;
+      tbody.innerHTML = "";
+      (d.rows || []).forEach((row) => {
+        const tr = document.createElement("tr");
+        const tdn = document.createElement("td");
+        tdn.textContent = row.name;
+        tr.appendChild(tdn);
+        row.cells.forEach((cell) => {
+          const td = document.createElement("td");
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    });
+  }
+
+  function loadTutorPupilStats() {
+    const box = $("#t-pupil-stats");
+    if (!box || !tSelectedPupilKey) return;
+    box.innerHTML = '<p style="color:#6b7a90">Загрузка…</p>';
+    api(
+      `/api/teacher/classes/${encodeURIComponent(tClassId)}/students/${encodeURIComponent(
+        tSelectedPupilKey
+      )}/stats`
+    )
+      .then((st) => {
+        const chem = st.chemistry;
+        let html = `<div class="stat-block"><h4>${chem.label}</h4>`;
+        html += `<p>Средний балл: <strong>${chem.average.toFixed(2)}</strong></p>`;
+        html += `<p style="font-size:0.85rem;color:#6b7a90">Оценки (пример): ${chem.grades.join(", ")}</p></div>`;
+        html += '<div class="stat-block"><h4>Все предметы</h4>';
+        st.subjects.forEach((sub) => {
+          html += `<div class="stat-row"><span>${sub.name}</span><span>${sub.average.toFixed(2)} (${sub.gradesCount} оц.)</span></div>`;
+        });
+        html += "</div>";
+        box.innerHTML = html;
+      })
+      .catch(() => {
+        box.innerHTML = '<p class="placeholder-msg">Не удалось загрузить статистику</p>';
+      });
+  }
+
+  function fillTutorPupilPicker() {
+    const list = $("#t-pupil-list");
+    if (!list) return;
+    list.innerHTML = "";
+    api(`/api/teacher/classes/${encodeURIComponent(tClassId)}/roster`).then((d) => {
+      (d.names || []).forEach((name, i) => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        const key = String(i);
+        btn.className = key === tSelectedPupilKey ? "is-current" : "";
+        btn.innerHTML = '<div class="p-name"></div>';
+        btn.querySelector(".p-name").textContent = name;
+        btn.addEventListener("click", () => {
+          tSelectedPupilKey = key;
+          $("#t-pupil-picker").hidden = true;
+          loadTutorPupilStats();
+        });
+        li.appendChild(btn);
+        list.appendChild(li);
+      });
+    });
+  }
+
+  function loadParentMeetings() {
+    const panel = $("#meetings-panel");
+    if (!panel) return;
+    api(`/api/children/${encodeURIComponent(childId)}/meeting`)
+      .then((d) => {
+        if (!d.meeting) {
+          panel.innerHTML =
+            '<p class="placeholder-msg">Пока в ближайшее время собраний нет</p>';
+          return;
+        }
+        const m = d.meeting;
+        panel.innerHTML =
+          '<div class="meeting-announce">' +
+          '<div class="meeting-announce__dt"></div>' +
+          '<div class="meeting-announce__topic"></div></div>';
+        const dt = panel.querySelector(".meeting-announce__dt");
+        const top = panel.querySelector(".meeting-announce__topic");
+        const dFmt = new Date(m.date + "T12:00:00");
+        const dateStr = dFmt.toLocaleDateString("ru-RU", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        if (dt) dt.textContent = `${dateStr}, ${m.time}`;
+        if (top) top.textContent = m.topic;
+      })
+      .catch(() => {
+        panel.innerHTML =
+          '<p class="placeholder-msg">Не удалось загрузить данные о собрании</p>';
+      });
+  }
+
   function loadTeacherDiaryMeta() {
     return api(`/api/teacher/classes/${encodeURIComponent(tClassId)}/diary?date=${encodeURIComponent(tDiaryDate)}`)
       .then((d) => {
@@ -445,18 +635,25 @@
         $("#t-month-y").textContent = `${day.monthGenitive}, ${day.year}`;
         lessonsEl.innerHTML = "";
         day.lessons.forEach((les) => {
-          lessonsEl.appendChild(renderLesson(les, { teacherEdit: true }));
+          lessonsEl.appendChild(
+            renderLesson(les, { teacherEdit: true, onlyChemistry: true })
+          );
         });
         updateTeacherDiaryNavState();
+        loadChemTable();
       })
       .catch(() => {
         lessonsEl.innerHTML =
           '<p style="text-align:center;color:#c45">Нет расписания на этот день.</p>';
+        const tbody = $("#t-chem-tbody");
+        if (tbody) tbody.innerHTML = "";
         updateTeacherDiaryNavState();
       });
   }
 
   function initTeacherShell() {
+    tTab = "diary";
+    setTeacherTab("diary");
     return api("/api/teacher/profile")
       .then((p) => {
         teacherProfile = p;
@@ -472,12 +669,11 @@
           tClassId = teacherClasses[0].id;
         }
         tDiaryDate = diaryDate;
-        renderTeacherClassButtons();
+        syncHdrClassSelect();
         return loadTeacherDiaryMeta();
       })
       .then(() => {
         loadTeacherDiary();
-        loadTeacherRoster();
       });
   }
 
@@ -730,7 +926,75 @@
   attachDiarySwipe($("#t-diary-card"), shiftTeacherDiary);
 
   $("#lm-cancel").addEventListener("click", closeLessonModal);
-  $(".lesson-modal__backdrop").addEventListener("click", closeLessonModal);
+  document.querySelectorAll("#lesson-modal .lesson-modal__backdrop").forEach((el) => {
+    el.addEventListener("click", closeLessonModal);
+  });
+
+  $("#hdr-class-select").addEventListener("change", (e) => {
+    tClassId = e.target.value;
+    tSelectedPupilKey = null;
+    const ps = $("#t-pupil-stats");
+    if (ps) ps.innerHTML = "";
+    loadTeacherDiaryMeta().then(() => {
+      loadTeacherDiary();
+      if (tTab === "quarters") loadTeacherQuarterTable();
+    });
+  });
+
+  document.querySelectorAll("#teacher-bottomnav .bn-item").forEach((b) => {
+    b.addEventListener("click", () => {
+      const next = b.dataset.tTab;
+      if (next) setTeacherTab(next);
+    });
+  });
+
+  $("#t-open-pupil-picker").addEventListener("click", () => {
+    fillTutorPupilPicker();
+    $("#t-pupil-picker").hidden = false;
+  });
+  $("#t-pupil-picker-close").addEventListener("click", () => {
+    $("#t-pupil-picker").hidden = true;
+  });
+  $("#t-pupil-picker-backdrop").addEventListener("click", () => {
+    $("#t-pupil-picker").hidden = true;
+  });
+
+  $("#t-meeting-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const date = $("#t-meeting-date").value;
+    const time = $("#t-meeting-time").value;
+    const topic = $("#t-meeting-topic").value.trim();
+    apiPost(`/api/teacher/classes/${encodeURIComponent(tClassId)}/meeting`, {
+      date,
+      time,
+      topic,
+    })
+      .then(() => {
+        alert("Собрание сохранено. Родители увидят его во вкладке «Собрание».");
+        $("#t-meeting-form").reset();
+      })
+      .catch(() => alert("Не удалось сохранить собрание"));
+  });
+
+  $("#scm-cancel").addEventListener("click", closeStudentChemModal);
+  $("#student-chem-backdrop").addEventListener("click", closeStudentChemModal);
+  $("#scm-save").addEventListener("click", () => {
+    if (!editingStudentKey) return;
+    const raw = $("#scm-grade").value;
+    const lessonGrade = raw === "" ? null : Number(raw);
+    const absent = $("#scm-absent").checked;
+    apiPut(
+      `/api/teacher/classes/${encodeURIComponent(tClassId)}/chemistry-day/${encodeURIComponent(
+        tDiaryDate
+      )}/students/${encodeURIComponent(editingStudentKey)}`,
+      { lessonGrade, absent }
+    )
+      .then(() => {
+        closeStudentChemModal();
+        loadChemTable();
+      })
+      .catch(() => alert("Не удалось сохранить"));
+  });
 
   $("#lesson-form").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -781,6 +1045,7 @@
           if (tab === "diary") loadDiary();
           if (tab === "performance") setTab("performance");
           if (tab === "finals") loadFinals();
+          if (tab === "meetings") loadParentMeetings();
         });
     }
   });

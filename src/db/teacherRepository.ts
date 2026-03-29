@@ -1,5 +1,5 @@
 import type { DiaryDay } from "../types";
-import { TEACHER_PROFILE } from "../data/teacherSeedData";
+import { CHEMISTRY_LESSON_TITLE, TEACHER_PROFILE } from "../data/teacherSeedData";
 import { rowToLesson } from "./lessonRow";
 import { getPool } from "./pool";
 
@@ -114,10 +114,11 @@ export async function updateClassLesson(
   const w1 = n;
   const w2 = n + 1;
   const w3 = n + 2;
-  vals.push(classId, isoDate, lessonKey);
+  const w4 = n + 3;
+  vals.push(classId, isoDate, lessonKey, CHEMISTRY_LESSON_TITLE);
   const q = `UPDATE class_diary_lessons SET ${fields.join(
     ", "
-  )} WHERE class_id = $${w1} AND date_iso = $${w2}::date AND lesson_key = $${w3}`;
+  )} WHERE class_id = $${w1} AND date_iso = $${w2}::date AND lesson_key = $${w3} AND title = $${w4}`;
   const r = await pool.query(q, vals);
   return (r.rowCount ?? 0) > 0;
 }
