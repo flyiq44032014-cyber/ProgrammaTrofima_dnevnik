@@ -226,27 +226,61 @@ body {
   flex: 1;
 }
 
-.topbar__nutrition {
-  flex-shrink: 0;
+.topbar__right-cluster {
   display: flex;
-  align-items: center;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.topbar__nutrition {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.topbar__ctrl-hint {
+  font-size: 0.65rem;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  visibility: hidden;
+  height: 0.78rem;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
 }
 
 body.mode-teacher .topbar__nutrition {
   display: none;
 }
 
-.btn-nutrition {
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 8px 14px;
+.btn-nutrition,
+.role-select {
+  box-sizing: border-box;
+  min-height: 38px;
+  height: 38px;
+  padding: 0 12px;
   border-radius: 10px;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.btn-nutrition {
+  font-weight: 600;
+  min-width: 120px;
   border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.role-select {
+  min-width: 120px;
 }
 
 .btn-nutrition:hover {
@@ -1628,8 +1662,9 @@ body.mode-teacher .bottomnav:not(.bottomnav--teacher) {
   background: #f5f0e8;
   display: flex;
   flex-direction: column;
-  min-height: 100%;
-  min-height: 100dvh;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.15);
 }
 
@@ -1688,14 +1723,26 @@ body.mode-teacher .bottomnav:not(.bottomnav--teacher) {
 }
 
 .nut-subbar__menu {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border: 1px solid #e0d8ce;
-  border-radius: 8px;
-  background: #faf8f5;
+  border-radius: 10px;
+  background: #fff;
   cursor: pointer;
   flex-shrink: 0;
-  font-size: 1rem;
+  display: grid;
+  place-items: center;
+}
+
+.nut-hamburger {
+  width: 18px;
+  height: 2px;
+  background: #2c1810;
+  border-radius: 1px;
+  box-shadow:
+    0 5px 0 #2c1810,
+    0 10px 0 #2c1810;
 }
 
 .nut-subbar__school {
@@ -1727,7 +1774,9 @@ body.mode-teacher .bottomnav:not(.bottomnav--teacher) {
 
 .nut-scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 12px 12px calc(20px + env(safe-area-inset-bottom, 0));
 }
 
@@ -1815,6 +1864,15 @@ body.mode-teacher .bottomnav:not(.bottomnav--teacher) {
   font-weight: 600;
   padding: 6px 12px;
   border-radius: 999px;
+  border: none;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.nut-notify-pill:hover {
+  filter: brightness(1.05);
 }
 
 .nut-expand {
@@ -2063,7 +2121,115 @@ body.mode-teacher .bottomnav:not(.bottomnav--teacher) {
   font-size: 1.2rem;
 }
 
+.nut-pick-extra {
+  padding-bottom: 8px;
+}
+
+.nut-transfer-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.nut-transfer-modal[hidden] {
+  display: none !important;
+}
+
+.nut-transfer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 16, 14, 0.4);
+}
+
+.nut-transfer-sheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0));
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.nut-transfer-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.nut-transfer-hint {
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.nut-transfer-field {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.nut-transfer-input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e0d8ce;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.nut-transfer-err {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: #b71c1c;
+}
+
+.nut-transfer-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.nut-transfer-cancel,
+.nut-transfer-submit {
+  flex: 1;
+  padding: 14px 12px;
+  border-radius: 12px;
+  border: none;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nut-transfer-cancel {
+  background: #eef1f6;
+  color: var(--text);
+}
+
+.nut-transfer-submit {
+  background: #c05d28;
+  color: #fff;
+}
+
 @media (min-width: 480px) {
+  .nut-transfer-modal {
+    align-items: center;
+    padding: 16px;
+  }
+
+  .nut-transfer-sheet {
+    border-radius: 16px;
+  }
+
   .picker__sheet {
     margin-bottom: 12px;
     border-radius: 16px;
@@ -2085,7 +2251,8 @@ body.mode-teacher .bottomnav:not(.bottomnav--teacher) {
   }
 
   .nutrition-modal__panel {
-    min-height: min(92vh, 840px);
-    border-radius: 16px 16px 0 0;
+    height: min(92vh, 840px);
+    max-height: 92vh;
+    border-radius: 16px;
   }
 }

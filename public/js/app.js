@@ -252,15 +252,56 @@
   let nutPhase = "pick";
 
   function nutGoBackOrClose() {
+    const tr = $("#nut-transfer-modal");
+    if (tr && tr.hidden === false) {
+      closeNutritionTransferModal();
+      return;
+    }
     if (nutPhase === "detail") showNutritionPick();
     else closeNutritionModal();
   }
 
   function closeNutritionModal() {
+    const tr = $("#nut-transfer-modal");
+    if (tr) tr.hidden = true;
     removeFocusTrap();
     const m = $("#nutrition-modal");
     if (m) m.hidden = true;
     nutPhase = "pick";
+  }
+
+  function syncNutritionTransferSelectors() {
+    const fromEl = $("#nut-tr-from");
+    const toEl = $("#nut-tr-to");
+    if (!fromEl || !toEl) return;
+    const from = fromEl.value;
+    toEl.querySelectorAll("option").forEach((o) => {
+      o.disabled = o.value === from;
+    });
+    if (toEl.value === from) {
+      toEl.value = from === "nika" ? "efrem" : "nika";
+    }
+  }
+
+  function openNutritionTransferModal() {
+    const tm = $("#nut-transfer-modal");
+    if (!tm) return;
+    const err = $("#nut-tr-error");
+    const amt = $("#nut-tr-amount");
+    if (err) err.hidden = true;
+    if (amt) amt.value = "";
+    removeFocusTrap();
+    tm.hidden = false;
+    syncNutritionTransferSelectors();
+    installFocusTrap(tm, closeNutritionTransferModal);
+  }
+
+  function closeNutritionTransferModal() {
+    removeFocusTrap();
+    const tr = $("#nut-transfer-modal");
+    if (tr) tr.hidden = true;
+    const nm = $("#nutrition-modal");
+    if (nm && nm.hidden === false) installFocusTrap(nm, nutGoBackOrClose);
   }
 
   function showNutritionPick() {
@@ -1384,10 +1425,69 @@
         if (id) showNutritionDetail(id);
         return;
       }
+      if (e.target.closest(".nut-open-transfer")) {
+        e.preventDefault();
+        openNutritionTransferModal();
+        return;
+      }
       if (e.target.closest(".nut-stub")) {
         e.preventDefault();
         announceStatus("Временная заглушка: функция в разработке");
       }
+    });
+  }
+
+  const nutMenuBtn = $("#nut-menu-btn");
+  if (nutMenuBtn) {
+    nutMenuBtn.addEventListener("click", () => {
+      announceStatus("Меню: временная заглушка");
+    });
+  }
+  const nutUnread = $("#nut-notify-unread");
+  if (nutUnread) {
+    nutUnread.addEventListener("click", () => {
+      announceStatus("Уведомления: временная заглушка");
+    });
+  }
+
+  const nutTrFrom = $("#nut-tr-from");
+  if (nutTrFrom) nutTrFrom.addEventListener("change", syncNutritionTransferSelectors);
+
+  const nutTrCancel = $("#nut-tr-cancel");
+  const nutTrBd = $("#nut-transfer-backdrop");
+  if (nutTrCancel) nutTrCancel.addEventListener("click", closeNutritionTransferModal);
+  if (nutTrBd) nutTrBd.addEventListener("click", closeNutritionTransferModal);
+
+  const nutTrSubmit = $("#nut-tr-submit");
+  if (nutTrSubmit) {
+    nutTrSubmit.addEventListener("click", () => {
+      const from = $("#nut-tr-from") && $("#nut-tr-from").value;
+      const to = $("#nut-tr-to") && $("#nut-tr-to").value;
+      const raw = $("#nut-tr-amount") && $("#nut-tr-amount").value;
+      const amt = parseFloat(String(raw).replace(",", "."));
+      const err = $("#nut-tr-error");
+      if (!from || !to) return;
+      if (from === to) {
+        if (err) {
+          err.textContent = "Выберите разных детей";
+          err.hidden = false;
+        }
+        return;
+      }
+      if (!(amt > 0)) {
+        if (err) {
+          err.textContent = "Введите сумму больше нуля";
+          err.hidden = false;
+        }
+        return;
+      }
+      if (err) err.hidden = true;
+      const fromName = (NUTRITION_CHILDREN[from] && NUTRITION_CHILDREN[from].name) || from;
+      const toName = (NUTRITION_CHILDREN[to] && NUTRITION_CHILDREN[to].name) || to;
+      const msg = `Демо: перевод не выполняется. ${fromName} → ${toName}: ${amt.toFixed(2)} руб.`;
+      announceStatus(msg);
+      alert(msg);
+      closeNutritionTransferModal();
     });
   }
 
