@@ -597,16 +597,31 @@
       });
   }
 
+  function compareRosterByLastName(a, b) {
+    const partsA = String(a.name).trim().split(/\s+/);
+    const partsB = String(b.name).trim().split(/\s+/);
+    const lastA = partsA[0] || "";
+    const lastB = partsB[0] || "";
+    const ln = lastA.localeCompare(lastB, "ru", { sensitivity: "base" });
+    if (ln !== 0) return ln;
+    const firstA = partsA.slice(1).join(" ");
+    const firstB = partsB.slice(1).join(" ");
+    return firstA.localeCompare(firstB, "ru", { sensitivity: "base" });
+  }
+
   function fillTutorPupilPicker() {
     const list = $("#t-pupil-list");
     if (!list) return;
     list.innerHTML = "";
     api(`/api/teacher/classes/${encodeURIComponent(tClassId)}/roster`).then((d) => {
-      (d.names || []).forEach((name, i) => {
+      const names = d.names || [];
+      const indexed = names.map((name, rosterIndex) => ({ name, rosterIndex }));
+      indexed.sort(compareRosterByLastName);
+      indexed.forEach(({ name, rosterIndex }) => {
         const li = document.createElement("li");
         const btn = document.createElement("button");
         btn.type = "button";
-        const key = String(i);
+        const key = String(rosterIndex);
         btn.className = key === tSelectedPupilKey ? "is-current" : "";
         btn.innerHTML = '<div class="p-name"></div>';
         btn.querySelector(".p-name").textContent = name;

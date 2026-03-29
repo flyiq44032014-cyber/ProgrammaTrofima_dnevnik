@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <title>Электронный дневник</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.0.7" />
+    <link rel="stylesheet" href="/css/app.css?v=1.0.9" />
   </head>
   <body>
     <div class="app-bg" aria-hidden="true"></div>
@@ -270,11 +270,13 @@
       </nav>
     </div>
 
-    <div id="t-pupil-picker" class="picker" hidden>
+    <div id="t-pupil-picker" class="picker picker--t-pupil" hidden>
       <div class="picker__backdrop" id="t-pupil-picker-backdrop"></div>
-      <div class="picker__sheet" role="dialog" aria-label="Выбор ученика">
-        <div class="picker__title">Ученик класса</div>
-        <ul id="t-pupil-list" class="picker__list"></ul>
+      <div class="picker__sheet picker__sheet--t-pupil" role="dialog" aria-label="Выбор ученика">
+        <div class="picker__title picker__title--t-pupil">Ученик класса</div>
+        <div class="picker__scroll picker__scroll--pupil">
+          <ul id="t-pupil-list" class="picker__list picker__list--t-pupil"></ul>
+        </div>
         <button type="button" class="picker__close" id="t-pupil-picker-close">Отмена</button>
       </div>
     </div>
@@ -328,6 +330,6 @@
       </div>
     </div>
 
-    <script src="/js/app.js?v=1.0.8" defer></script>
+    <script src="/js/app.js?v=1.0.9" defer></script>
   </body>
 </html>
