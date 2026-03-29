@@ -1,4 +1,6 @@
 :root {
+  /* Ширина основной колонки (контент + нижние вкладки на широких экранах) */
+  --app-column-max: 560px;
   --topbar: #5c2a2e;
   --bottom: #2a2f5c;
   --blue: #2f6fed;
@@ -504,7 +506,7 @@ body.mode-teacher .topbar__nutrition {
 .main {
   position: relative;
   z-index: 1;
-  max-width: 560px;
+  max-width: var(--app-column-max);
   margin: 0 auto;
   padding: 12px 8px 8px;
 }
@@ -1203,9 +1205,13 @@ button.t-cal-cell--day.is-selected {
 .bottomnav {
   position: fixed;
   z-index: 30;
-  left: 0;
-  right: 0;
+  left: 50%;
+  right: auto;
   bottom: 0;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--app-column-max);
+  box-sizing: border-box;
   display: flex;
   justify-content: space-around;
   align-items: stretch;
@@ -1489,10 +1495,6 @@ button.t-cal-cell--day.is-selected {
 }
 
 .bottomnav--teacher {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
   z-index: 40;
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
