@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <title>Электронный дневник</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.2.0" />
+    <link rel="stylesheet" href="/css/app.css?v=1.2.1" />
   </head>
   <body>
     <div id="app-announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -688,14 +688,28 @@
             >Пароль
             <input type="password" id="auth-password" name="password" autocomplete="current-password" required />
           </label>
-          <label class="auth-field" id="auth-role-wrap" hidden
-            >Роль (демо)
-            <select id="auth-role" name="role">
-              <option value="parent">Родитель</option>
-              <option value="teacher">Учитель</option>
-            </select>
-          </label>
-          <p class="auth-hints">
+          <div id="auth-register-extra" class="auth-register-extra" hidden>
+            <label class="auth-field"
+              >Фамилия
+              <input type="text" id="auth-last-name" name="lastName" autocomplete="family-name" />
+            </label>
+            <label class="auth-field"
+              >Имя
+              <input type="text" id="auth-first-name" name="firstName" autocomplete="given-name" />
+            </label>
+            <label class="auth-field"
+              >Отчество
+              <input type="text" id="auth-patronymic" name="patronymic" autocomplete="additional-name" />
+            </label>
+            <label class="auth-field"
+              >Роль
+              <select id="auth-role" name="role">
+                <option value="parent">Родитель</option>
+                <option value="teacher">Учитель</option>
+              </select>
+            </label>
+          </div>
+          <p id="auth-login-hints" class="auth-hints">
             <strong>Для учебных целей (вход):</strong><br />
             Родитель — <code>Roditel@yandex.ru</code>, пароль <code>1234</code><br />
             Учитель — <code>Uchitel@yandex.ru</code>, пароль <code>0987</code>
@@ -709,6 +723,6 @@
       </div>
     </div>
 
-    <script src="/js/app.js?v=1.2.0" defer></script>
+    <script src="/js/app.js?v=1.2.1" defer></script>
   </body>
 </html>

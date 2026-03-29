@@ -3,6 +3,7 @@ import {
   dbCreateUser,
   dbFindUserByEmail,
   type AuthUserRow,
+  type RegisterProfile,
   type UserRole,
 } from "../db/authRepository";
 
@@ -52,10 +53,21 @@ export async function authVerifyPassword(plain: string, hash: string): Promise<b
   return bcrypt.compare(plain, hash);
 }
 
+function validateProfile(p: RegisterProfile): void {
+  if (
+    !p.lastName.trim() ||
+    !p.firstName.trim() ||
+    !p.patronymic.trim()
+  ) {
+    throw new Error("INVALID_NAME");
+  }
+}
+
 export async function authCreateUser(
   email: string,
   passwordPlain: string,
-  role: UserRole
+  role: UserRole,
+  profile: RegisterProfile
 ): Promise<AuthUserRow> {
   const norm = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(norm)) {
@@ -64,11 +76,12 @@ export async function authCreateUser(
   if (passwordPlain.length < 4) {
     throw new Error("WEAK_PASSWORD");
   }
+  validateProfile(profile);
   const hash = await bcrypt.hash(passwordPlain, 10);
   if (useDb()) {
     const existing = await dbFindUserByEmail(norm);
     if (existing) throw new Error("EMAIL_TAKEN");
-    return dbCreateUser(norm, hash, role);
+    return dbCreateUser(norm, hash, role, profile);
   }
   seedMemoryUsers();
   if (memStore.has(norm)) throw new Error("EMAIL_TAKEN");

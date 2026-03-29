@@ -691,19 +691,31 @@
     const title = $("#auth-title");
     const form = $("#auth-form");
     const submit = form && form.querySelector(".auth-submit");
-    const roleWrap = $("#auth-role-wrap");
+    const regExtra = $("#auth-register-extra");
+    const loginHints = $("#auth-login-hints");
     const tabLogin = $("#auth-tab-login");
     const tabReg = $("#auth-tab-register");
+    const reqRegIds = ["auth-last-name", "auth-first-name", "auth-patronymic"];
     if (mode === "register") {
       if (title) title.textContent = "Регистрация";
       if (submit) submit.textContent = "Создать аккаунт";
-      if (roleWrap) roleWrap.hidden = false;
+      if (regExtra) regExtra.hidden = false;
+      if (loginHints) loginHints.hidden = true;
+      reqRegIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.required = true;
+      });
       if (tabReg) tabReg.classList.add("auth-tab--active");
       if (tabLogin) tabLogin.classList.remove("auth-tab--active");
     } else {
       if (title) title.textContent = "Вход в систему";
       if (submit) submit.textContent = "Войти";
-      if (roleWrap) roleWrap.hidden = true;
+      if (regExtra) regExtra.hidden = true;
+      if (loginHints) loginHints.hidden = false;
+      reqRegIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.required = false;
+      });
       if (tabLogin) tabLogin.classList.add("auth-tab--active");
       if (tabReg) tabReg.classList.remove("auth-tab--active");
     }
@@ -1791,12 +1803,16 @@
     const path =
       authMode === "register" ? "/api/auth/register" : "/api/auth/login";
     const roleSel = $("#auth-role");
+    /** @type {Record<string, string>} */
     const payload =
       authMode === "register"
         ? {
             email,
             password,
             role: roleSel && roleSel.value === "teacher" ? "teacher" : "parent",
+            lastName: ($("#auth-last-name") && $("#auth-last-name").value) || "",
+            firstName: ($("#auth-first-name") && $("#auth-first-name").value) || "",
+            patronymic: ($("#auth-patronymic") && $("#auth-patronymic").value) || "",
           }
         : { email, password };
 

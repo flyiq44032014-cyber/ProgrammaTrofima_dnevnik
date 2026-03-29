@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { RegisterProfile } from "../db/authRepository";
 import {
   authCreateUser,
   authFindByEmail,
@@ -58,11 +59,16 @@ authRouter.post("/register", async (req, res) => {
     const password = String(req.body?.password ?? "");
     const roleRaw = String(req.body?.role ?? "parent");
     const role = roleRaw === "teacher" ? "teacher" : "parent";
+    const profile: RegisterProfile = {
+      lastName: String(req.body?.lastName ?? ""),
+      firstName: String(req.body?.firstName ?? ""),
+      patronymic: String(req.body?.patronymic ?? ""),
+    };
     if (!email || !password) {
       res.status(400).json({ error: "Укажите почту и пароль" });
       return;
     }
-    const row = await authCreateUser(email, password, role);
+    const row = await authCreateUser(email, password, role, profile);
     setSession(req, {
       id: row.id,
       email: row.email,
@@ -84,6 +90,10 @@ authRouter.post("/register", async (req, res) => {
     }
     if (msg === "WEAK_PASSWORD") {
       res.status(400).json({ error: "Пароль не короче 4 символов" });
+      return;
+    }
+    if (msg === "INVALID_NAME") {
+      res.status(400).json({ error: "Укажите фамилию, имя и отчество" });
       return;
     }
     console.error(e);

@@ -20,16 +20,31 @@ export async function dbFindUserByEmail(emailLower: string): Promise<AuthUserRow
   return r;
 }
 
+export interface RegisterProfile {
+  lastName: string;
+  firstName: string;
+  patronymic: string;
+}
+
 export async function dbCreateUser(
   emailLower: string,
   passwordHash: string,
-  role: UserRole
+  role: UserRole,
+  profile: RegisterProfile
 ): Promise<AuthUserRow> {
   const norm = emailLower.trim().toLowerCase();
   const { rows } = await getPool().query<AuthUserRow>(
-    `INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3)
+    `INSERT INTO users (email, password_hash, role, last_name, first_name, patronymic)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING id, email, password_hash, role`,
-    [norm, passwordHash, role]
+    [
+      norm,
+      passwordHash,
+      role,
+      profile.lastName.trim(),
+      profile.firstName.trim(),
+      profile.patronymic.trim(),
+    ]
   );
   const r = rows[0];
   if (!r) throw new Error("CREATE_FAILED");
