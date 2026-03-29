@@ -30,6 +30,8 @@ app.use(
 );
 
 app.get("*", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.setHeader("Pragma", "no-cache");
   res.sendFile(path.join(publicDir, "index.html"));
 });
 

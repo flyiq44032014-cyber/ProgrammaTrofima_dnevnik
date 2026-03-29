@@ -3,16 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
     <title>Электронный дневник</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.0.5" />
+    <link rel="stylesheet" href="/css/app.css?v=1.0.7" />
   </head>
   <body>
     <div class="app-bg" aria-hidden="true"></div>
 
     <div id="picker" class="picker" hidden>
       <div class="picker__backdrop"></div>
-      <div class="picker__sheet" role="dialog" aria-label="Выбор ученика">
-        <div class="picker__title">Кто учится?</div>
+      <div class="picker__sheet" role="dialog" aria-labelledby="picker-title">
+        <div class="picker__title" id="picker-title">Кто учится?</div>
         <ul id="picker-list" class="picker__list"></ul>
         <button type="button" class="picker__close" id="picker-close">Отмена</button>
       </div>
@@ -24,10 +26,6 @@
           <span class="topbar__name" id="hdr-name">—</span>
           <span class="topbar__class" id="hdr-class">—</span>
         </button>
-        <div id="topbar-teacher-class" class="topbar-teacher-class" hidden>
-          <label class="topbar__role-label" for="hdr-class-select">Класс</label>
-          <select id="hdr-class-select" class="role-select topbar-class-select" aria-label="Выбор класса"></select>
-        </div>
       </div>
       <div class="topbar__role">
         <label class="topbar__role-label" for="role-switch">Режим</label>
@@ -330,6 +328,6 @@
       </div>
     </div>
 
-    <script src="/js/app.js?v=1.0.5" defer></script>
+    <script src="/js/app.js?v=1.0.7" defer></script>
   </body>
 </html>

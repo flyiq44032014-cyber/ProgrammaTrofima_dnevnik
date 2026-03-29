@@ -101,7 +101,67 @@
     if (tab === "meetings") loadParentMeetings();
   }
 
+  function openTeacherClassPicker() {
+    const titleEl = $("#picker-title");
+    if (titleEl) titleEl.textContent = "Выберите класс";
+    const renderList = () => {
+      const list = $("#picker-list");
+      list.innerHTML = "";
+      teacherClasses.forEach((c) => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = c.id === tClassId ? "is-current" : "";
+        btn.innerHTML =
+          '<div class="p-name"></div><div class="p-class"></div>';
+        btn.querySelector(".p-name").textContent = `Класс ${c.label}`;
+        btn.querySelector(".p-class").textContent =
+          (teacherProfile && teacherProfile.subject) || "Химия";
+        btn.addEventListener("click", () => {
+          tClassId = c.id;
+          tSelectedPupilKey = null;
+          const ps = $("#t-pupil-stats");
+          if (ps) ps.innerHTML = "";
+          updateTeacherHeader();
+          $("#picker").hidden = true;
+          loadTeacherDiaryMeta().then(() => {
+            loadTeacherDiary();
+            if (tTab === "quarters") loadTeacherQuarterTable();
+          });
+        });
+        li.appendChild(btn);
+        list.appendChild(li);
+      });
+      $("#picker").hidden = false;
+    };
+    if (teacherClasses.length) {
+      renderList();
+      return;
+    }
+    api("/api/teacher/classes")
+      .then((d) => {
+        teacherClasses = d.classes || [];
+        if (teacherClasses.length && !teacherClasses.some((x) => x.id === tClassId)) {
+          tClassId = teacherClasses[0].id;
+        }
+        updateTeacherHeader();
+        renderList();
+      })
+      .catch(() => {
+        const list = $("#picker-list");
+        list.innerHTML =
+          '<li><p style="padding:12px;color:#c45;text-align:center">Не удалось загрузить классы</p></li>';
+        $("#picker").hidden = false;
+      });
+  }
+
   function openPicker() {
+    if (appRole === "teacher") {
+      openTeacherClassPicker();
+      return;
+    }
+    const titleEl = $("#picker-title");
+    if (titleEl) titleEl.textContent = "Кто учится?";
     const list = $("#picker-list");
     list.innerHTML = "";
     children.forEach((c) => {
@@ -345,7 +405,6 @@
     const nav = document.querySelector(".bottomnav:not(.bottomnav--teacher)");
     const tnav = $("#teacher-bottomnav");
     const op = $("#open-picker");
-    const tClassEl = $("#topbar-teacher-class");
 
     if (appRole === "teacher") {
       shellP.classList.add("view--hidden");
@@ -353,8 +412,7 @@
       shellT.removeAttribute("hidden");
       if (nav) nav.hidden = true;
       if (tnav) tnav.hidden = false;
-      if (op) op.hidden = true;
-      if (tClassEl) tClassEl.hidden = false;
+      if (op) op.hidden = false;
       document.body.style.paddingBottom = "calc(72px + env(safe-area-inset-bottom, 0))";
     } else {
       shellP.classList.remove("view--hidden");
@@ -363,7 +421,6 @@
       if (nav) nav.hidden = false;
       if (tnav) tnav.hidden = true;
       if (op) op.hidden = false;
-      if (tClassEl) tClassEl.hidden = true;
       document.body.style.paddingBottom = "";
       const cur = children.find((c) => c.id === childId) || children[0];
       if (cur) {
@@ -373,21 +430,12 @@
     }
   }
 
-  function syncHdrClassSelect() {
-    const sel = $("#hdr-class-select");
-    if (!sel) return;
-    const prev = tClassId;
-    sel.innerHTML = "";
-    teacherClasses.forEach((c) => {
-      const o = document.createElement("option");
-      o.value = c.id;
-      o.textContent = c.label;
-      sel.appendChild(o);
-    });
-    if (teacherClasses.some((c) => c.id === prev)) sel.value = prev;
-    else if (teacherClasses[0]) {
-      tClassId = teacherClasses[0].id;
-      sel.value = tClassId;
+  function updateTeacherHeader() {
+    const c = teacherClasses.find((x) => x.id === tClassId);
+    if (c) {
+      $("#hdr-name").textContent = `Класс ${c.label}`;
+      $("#hdr-class").textContent =
+        (teacherProfile && teacherProfile.subject) || "Химия";
     }
   }
 
@@ -634,7 +682,8 @@
         $("#t-weekday").textContent = day.weekday;
         $("#t-month-y").textContent = `${day.monthGenitive}, ${day.year}`;
         lessonsEl.innerHTML = "";
-        day.lessons.forEach((les) => {
+        const chemOnly = day.lessons.filter((les) => les.title === CHEM_SUBJ);
+        chemOnly.forEach((les) => {
           lessonsEl.appendChild(
             renderLesson(les, { teacherEdit: true, onlyChemistry: true })
           );
@@ -659,8 +708,6 @@
         teacherProfile = p;
         const line = $("#teacher-profile");
         if (line) line.textContent = `${p.name} — ${p.subject}`;
-        $("#hdr-name").textContent = p.name;
-        $("#hdr-class").textContent = p.subject;
         return api("/api/teacher/classes");
       })
       .then((d) => {
@@ -669,7 +716,7 @@
           tClassId = teacherClasses[0].id;
         }
         tDiaryDate = diaryDate;
-        syncHdrClassSelect();
+        updateTeacherHeader();
         return loadTeacherDiaryMeta();
       })
       .then(() => {
@@ -928,17 +975,6 @@
   $("#lm-cancel").addEventListener("click", closeLessonModal);
   document.querySelectorAll("#lesson-modal .lesson-modal__backdrop").forEach((el) => {
     el.addEventListener("click", closeLessonModal);
-  });
-
-  $("#hdr-class-select").addEventListener("change", (e) => {
-    tClassId = e.target.value;
-    tSelectedPupilKey = null;
-    const ps = $("#t-pupil-stats");
-    if (ps) ps.innerHTML = "";
-    loadTeacherDiaryMeta().then(() => {
-      loadTeacherDiary();
-      if (tTab === "quarters") loadTeacherQuarterTable();
-    });
   });
 
   document.querySelectorAll("#teacher-bottomnav .bn-item").forEach((b) => {

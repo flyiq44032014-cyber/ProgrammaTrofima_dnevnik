@@ -1,4 +1,6 @@
 import { Router } from "express";
+import type { DiaryDay } from "../types";
+import { CHEMISTRY_LESSON_TITLE } from "../data/teacherSeedData";
 import * as mem from "../data/teacherMemory";
 import {
   getClassDiary,
@@ -8,6 +10,14 @@ import {
   TEACHER_PROFILE,
   updateClassLesson,
 } from "../db/teacherRepository";
+
+/** Для режима учителя химии в API отдаём только урок химии (родители по-прежнему видят полный день). */
+function diaryChemLessonsOnly(day: DiaryDay): DiaryDay {
+  return {
+    ...day,
+    lessons: day.lessons.filter((l) => l.title === CHEMISTRY_LESSON_TITLE),
+  };
+}
 
 export const teacherRouter = Router();
 
@@ -88,13 +98,13 @@ teacherRouter.get("/classes/:classId/diary", async (req, res) => {
     return;
   }
   try {
-    const day = await diaryDaySafe(classId, date);
-    if (!day) {
+    const dayRaw = await diaryDaySafe(classId, date);
+    if (!dayRaw) {
       res.status(404).json({ error: "Нет данных" });
       return;
     }
     const dates = await diaryDatesSafe(classId);
-    res.json({ day, dates });
+    res.json({ day: diaryChemLessonsOnly(dayRaw), dates });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Ошибка" });
