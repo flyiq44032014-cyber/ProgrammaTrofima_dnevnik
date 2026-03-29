@@ -6,11 +6,78 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <title>Электронный дневник</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.1.6" />
+    <link rel="stylesheet" href="/css/app.css?v=1.1.7" />
   </head>
   <body>
     <div id="app-announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
     <div class="app-bg" aria-hidden="true"></div>
+
+    <svg xmlns="http://www.w3.org/2000/svg" class="bn-icons-sprite" aria-hidden="true" focusable="false">
+      <defs>
+        <symbol id="bn-icon-diary" viewBox="0 0 24 24">
+          <path
+            fill="currentColor"
+            d="M8 3h11a2 2 0 012 2v14a2 2 0 01-2 2H8V3z"
+            opacity="0.92"
+          />
+          <path fill="currentColor" d="M7 3H6a2 2 0 00-2 2v14a2 2 0 002 2h1V3z" opacity="0.68" />
+          <circle cx="4.5" cy="7.5" r="1" fill="currentColor" />
+          <circle cx="4.5" cy="12" r="1" fill="currentColor" />
+          <circle cx="4.5" cy="16.5" r="1" fill="currentColor" />
+          <path
+            stroke="currentColor"
+            stroke-width="0.9"
+            stroke-linecap="round"
+            opacity="0.45"
+            d="M14.5 5v14M16.8 5v14M19 5v14"
+          />
+        </symbol>
+        <symbol id="bn-icon-chart" viewBox="0 0 24 24">
+          <rect x="2.5" y="13" width="5" height="8" rx="1" fill="currentColor" opacity="0.85" />
+          <rect x="9.5" y="9" width="5" height="12" rx="1" fill="currentColor" opacity="0.85" />
+          <rect x="16.5" y="5" width="5" height="16" rx="1" fill="currentColor" opacity="0.85" />
+          <path
+            d="M3 17.5L9.5 11l3.5 3L20.5 6.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.35"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M18.5 5.5H22V9"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            opacity="0.95"
+          />
+        </symbol>
+        <symbol id="bn-icon-people" viewBox="0 0 24 24">
+          <circle cx="12" cy="6" r="3" fill="currentColor" opacity="0.88" />
+          <path
+            fill="currentColor"
+            d="M12 9.5c-3.3 0-6 2.4-6 5.3V19h12v-4.2c0-2.9-2.7-5.3-6-5.3z"
+            opacity="0.88"
+          />
+          <circle cx="6.8" cy="11.2" r="2" fill="currentColor" />
+          <ellipse cx="6.8" cy="16.5" rx="2.8" ry="2.2" fill="currentColor" opacity="0.92" />
+          <circle cx="17.2" cy="11.2" r="2" fill="currentColor" />
+          <ellipse cx="17.2" cy="16.5" rx="2.8" ry="2.2" fill="currentColor" opacity="0.92" />
+        </symbol>
+        <symbol id="bn-icon-list" viewBox="0 0 24 24">
+          <rect x="2.5" y="3.5" width="3" height="3" rx="0.45" fill="currentColor" />
+          <rect x="7.5" y="4" width="14.5" height="2" rx="0.5" fill="currentColor" opacity="0.92" />
+          <rect x="2.5" y="9" width="3" height="3" rx="0.45" fill="currentColor" />
+          <rect x="7.5" y="9.5" width="14.5" height="2" rx="0.5" fill="currentColor" opacity="0.92" />
+          <rect x="2.5" y="14.5" width="3" height="3" rx="0.45" fill="currentColor" />
+          <rect x="7.5" y="15" width="14.5" height="2" rx="0.5" fill="currentColor" opacity="0.92" />
+          <rect x="2.5" y="20" width="3" height="3" rx="0.45" fill="currentColor" />
+          <rect x="7.5" y="20.5" width="14.5" height="2" rx="0.5" fill="currentColor" opacity="0.92" />
+        </symbol>
+      </defs>
+    </svg>
 
     <div id="picker" class="picker" hidden>
       <div class="picker__backdrop"></div>
@@ -361,19 +428,27 @@
 
     <nav class="bottomnav" aria-label="Разделы">
       <button type="button" class="bn-item is-active" data-tab="diary">
-        <span class="bn-ico bn-ico--book" aria-hidden="true"></span>
+        <span class="bn-ico" aria-hidden="true"
+          ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-diary" /></svg
+        ></span>
         <span>Дневник</span>
       </button>
       <button type="button" class="bn-item" data-tab="performance">
-        <span class="bn-ico bn-ico--chart" aria-hidden="true"></span>
+        <span class="bn-ico" aria-hidden="true"
+          ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-chart" /></svg
+        ></span>
         <span>Успеваемость</span>
       </button>
       <button type="button" class="bn-item" data-tab="meetings">
-        <span class="bn-ico bn-ico--people" aria-hidden="true"></span>
+        <span class="bn-ico" aria-hidden="true"
+          ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-people" /></svg
+        ></span>
         <span>Собрание</span>
       </button>
       <button type="button" class="bn-item" data-tab="finals">
-        <span class="bn-ico bn-ico--list" aria-hidden="true"></span>
+        <span class="bn-ico" aria-hidden="true"
+          ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-list" /></svg
+        ></span>
         <span>Итоговые</span>
       </button>
     </nav>
@@ -576,6 +651,6 @@
       </div>
     </div>
 
-    <script src="/js/app.js?v=1.1.6" defer></script>
+    <script src="/js/app.js?v=1.1.7" defer></script>
   </body>
 </html>

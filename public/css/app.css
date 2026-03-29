@@ -1005,6 +1005,13 @@ button.t-cal-cell--day.is-selected {
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
 }
 
+.bn-icons-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
 .bn-item {
   flex: 1;
   display: flex;
@@ -1019,6 +1026,10 @@ button.t-cal-cell--day.is-selected {
   cursor: pointer;
   padding: 4px 2px;
   max-width: 96px;
+}
+
+.bn-item + .bn-item {
+  border-left: 1px solid rgba(100, 140, 230, 0.4);
 }
 
 .bn-item.is-active {
@@ -1038,35 +1049,11 @@ button.t-cal-cell--day.is-selected {
   place-items: center;
 }
 
-.bn-ico--book::before {
-  content: "";
-  width: 18px;
-  height: 14px;
-  border: 2px solid currentColor;
-  border-radius: 2px;
-  box-shadow: inset 0 -4px 0 currentColor;
-}
-.bn-ico--chart::before {
-  content: "";
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-bottom: 14px solid currentColor;
-  transform: skewX(-8deg);
-}
-.bn-ico--people::before {
-  content: "";
-  width: 18px;
-  height: 12px;
-  border-radius: 50% 50% 0 0;
-  box-shadow: -5px 4px 0 -1px currentColor, 5px 4px 0 -1px currentColor, 0 8px 0 -2px currentColor;
-}
-.bn-ico--list::before {
-  content: "≡";
-  font-size: 1.1rem;
-  font-weight: 700;
-  line-height: 1;
+.bn-ico-svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  color: inherit;
 }
 
 .picker {
