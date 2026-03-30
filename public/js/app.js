@@ -1155,20 +1155,23 @@
 
   function submitProfileAddClass() {
     setProfileError("");
-    const lblEl = $("#prof-class-label");
     const grEl = $("#prof-class-grade");
-    const label = lblEl ? String(lblEl.value).trim() : "";
-    if (!label) {
-      setProfileError("Укажите название класса.");
+    const letterEl = $("#prof-class-letter");
+    const gradeRaw = grEl ? String(grEl.value).trim() : "";
+    const letterRaw = letterEl ? String(letterEl.value).trim() : "";
+    if (!gradeRaw || !letterRaw) {
+      setProfileError("Выберите параллель и литера класса.");
       return;
     }
-    const gradeRaw = grEl && grEl.value !== "" ? String(grEl.value).trim() : "";
-    /** @type {Record<string, string | number>} */
-    const payload = { label };
-    if (gradeRaw !== "") {
-      const n = Number(gradeRaw);
-      if (Number.isFinite(n)) payload.grade = n;
+
+    const gradeNum = Number(gradeRaw);
+    if (!Number.isFinite(gradeNum)) {
+      setProfileError("Параллель должна быть числом.");
+      return;
     }
+
+    /** @type {Record<string, string | number>} */
+    const payload = { label: `${gradeNum} ${letterRaw}`, grade: gradeNum };
     apiPost("/api/profile/classes", payload)
       .then((body) => {
         const clList = $("#profile-classes-list");
@@ -1184,8 +1187,8 @@
           }
           clList.appendChild(li);
         }
-        if (lblEl) lblEl.value = "";
         if (grEl) grEl.value = "";
+        if (letterEl) letterEl.value = "";
       })
       .catch((err) => setProfileError(getApiErrorMessage(err)));
   }
@@ -1503,6 +1506,7 @@
       const ti = $("#t-meeting-time");
       if (di && !di.value) di.value = "2026-04-10";
       if (ti && !ti.value) ti.value = "18:00";
+      loadTeacherMeetings();
     }
   }
 
@@ -1672,37 +1676,98 @@
   }
 
   function loadParentMeetings() {
-    const panel = $("#meetings-panel");
-    if (!panel) return;
+    const tbody = $("#meetings-tbody");
+    const empty = $("#meetings-empty");
+    const msg = $("#meetings-msg");
+    if (!tbody) return;
+
+    if (msg) msg.hidden = false;
+    if (empty) empty.hidden = true;
+    tbody.innerHTML = "";
+
     api(`/api/children/${encodeURIComponent(childId)}/meeting`)
       .then((d) => {
-        if (!d.meeting) {
-          panel.innerHTML =
-            '<p class="placeholder-msg">Пока в ближайшее время собраний нет</p>';
+        if (msg) msg.hidden = true;
+        const m = d.meeting;
+        if (!m) {
+          if (empty) empty.hidden = false;
           return;
         }
-        const m = d.meeting;
-        panel.innerHTML =
-          '<div class="meeting-announce">' +
-          '<div class="meeting-announce__dt"></div>' +
-          '<div class="meeting-announce__topic"></div></div>';
-        const dt = panel.querySelector(".meeting-announce__dt");
-        const top = panel.querySelector(".meeting-announce__topic");
+
+        const tr = document.createElement("tr");
+        const tdDate = document.createElement("td");
+        const tdTime = document.createElement("td");
+        const tdTopic = document.createElement("td");
         const dFmt = dateFromIsoCalendar(m.date);
         const dateStr = dFmt.toLocaleDateString("ru-RU", {
           day: "numeric",
           month: "long",
           year: "numeric",
         });
-        if (dt) dt.textContent = `${dateStr}, ${m.time}`;
-        if (top) top.textContent = m.topic;
+        tdDate.textContent = dateStr;
+        tdTime.textContent = m.time || "—";
+        tdTopic.textContent = m.topic || "";
+        tr.appendChild(tdDate);
+        tr.appendChild(tdTime);
+        tr.appendChild(tdTopic);
+        tbody.appendChild(tr);
       })
       .catch((err) => {
-        const msg = getApiErrorMessage(err);
-        announceStatus(msg);
-        panel.innerHTML = '<p class="placeholder-msg"></p>';
-        const p = panel.querySelector(".placeholder-msg");
-        if (p) p.textContent = msg;
+        const emsg = getApiErrorMessage(err);
+        announceStatus(emsg);
+        if (msg) {
+          msg.textContent = emsg;
+          msg.hidden = false;
+        }
+        if (empty) empty.hidden = false;
+      });
+  }
+
+  function loadTeacherMeetings() {
+    const tbody = $("#t-meetings-tbody");
+    const empty = $("#t-meetings-empty");
+    const msg = $("#t-meetings-msg");
+    if (!tbody) return;
+
+    if (msg) msg.hidden = false;
+    if (empty) empty.hidden = true;
+    tbody.innerHTML = "";
+
+    api(`/api/teacher/classes/${encodeURIComponent(tClassId)}/meeting`)
+      .then((d) => {
+        if (msg) msg.hidden = true;
+        const m = d.meeting;
+        if (!m) {
+          if (empty) empty.hidden = false;
+          return;
+        }
+
+        const tr = document.createElement("tr");
+        const tdDate = document.createElement("td");
+        const tdTime = document.createElement("td");
+        const tdTopic = document.createElement("td");
+        const dFmt = dateFromIsoCalendar(m.date);
+        const dateStr = dFmt.toLocaleDateString("ru-RU", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        tdDate.textContent = dateStr;
+        tdTime.textContent = m.time || "—";
+        tdTopic.textContent = m.topic || "";
+        tr.appendChild(tdDate);
+        tr.appendChild(tdTime);
+        tr.appendChild(tdTopic);
+        tbody.appendChild(tr);
+      })
+      .catch((err) => {
+        const emsg = getApiErrorMessage(err);
+        announceStatus(emsg);
+        if (msg) {
+          msg.textContent = emsg;
+          msg.hidden = false;
+        }
+        if (empty) empty.hidden = false;
       });
   }
 
@@ -2129,6 +2194,7 @@
         announceStatus(ok);
         alert(ok);
         $("#t-meeting-form").reset();
+        loadTeacherMeetings();
       })
       .catch((err) => {
         const msg = getApiErrorMessage(err);

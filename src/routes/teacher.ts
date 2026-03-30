@@ -240,6 +240,19 @@ teacherRouter.post("/classes/:classId/meeting", async (req, res) => {
   }
 });
 
+teacherRouter.get("/classes/:classId/meeting", async (req, res) => {
+  const { classId } = req.params;
+  try {
+    // В демо-сценарии собрания живут в in-memory teacherMemory.
+    // В БД сейчас таблицы собраний нет, поэтому возвращаем демо-значение.
+    const meeting = mem.memGetMeeting(classId);
+    res.json({ meeting });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
 teacherRouter.put(
   "/classes/:classId/diary/:isoDate/lessons/:lessonKey",
   async (req, res) => {
