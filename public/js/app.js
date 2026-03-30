@@ -139,26 +139,159 @@
   const MODAL_MOTION_CLASS = "modal-motion";
   const LANDING_MOTION_CLASS = "landing-motion";
 
-  /** Сброс и повторное добавление класса — иначе CSS-animation у листа часто не стартует после display:none у родителя. */
+  function prefersReducedMotion() {
+    try {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function cancelElAnimations(el) {
+    if (!el || typeof el.getAnimations !== "function") return;
+    el.getAnimations().forEach((a) => a.cancel());
+  }
+
+  function clearModalMotionInline(el) {
+    if (!el) return;
+    el.style.opacity = "";
+    el.style.transform = "";
+  }
+
+  /**
+   * Вход модалки: на мобильных WebKit/CSS-animations часто не стартуют у листа после hidden.
+   * Web Animations API + translate3d + двойной rAF дают стабильный результат.
+   */
   function beginModalMotion(root) {
     if (!root) return;
     root.classList.remove(MODAL_MOTION_CLASS);
-    void root.offsetWidth;
-    requestAnimationFrame(() => {
+
+    const sheet = root.querySelector(
+      ".auth-modal__sheet, .profile-modal__sheet, .picker__sheet, .lesson-modal__sheet"
+    );
+    const backdrop = root.querySelector(
+      ".auth-modal__backdrop, .profile-modal__backdrop, .picker__backdrop, .lesson-modal__backdrop"
+    );
+
+    if (prefersReducedMotion()) {
+      clearModalMotionInline(sheet);
+      clearModalMotionInline(backdrop);
       root.classList.add(MODAL_MOTION_CLASS);
+      return;
+    }
+
+    const canWaapi = Boolean(
+      sheet && typeof sheet.animate === "function"
+    );
+
+    if (canWaapi) {
+      cancelElAnimations(sheet);
+      cancelElAnimations(backdrop);
+
+      sheet.style.opacity = "0";
+      sheet.style.transform = "translate3d(0, 40px, 0)";
+      if (backdrop) backdrop.style.opacity = "0";
+
+      void root.offsetHeight;
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (backdrop && typeof backdrop.animate === "function") {
+            const bAnim = backdrop.animate(
+              [{ opacity: 0 }, { opacity: 1 }],
+              { duration: 280, easing: "ease-out", fill: "forwards" }
+            );
+            bAnim.onfinish = () => clearModalMotionInline(backdrop);
+          }
+
+          const sAnim = sheet.animate(
+            [
+              { transform: "translate3d(0, 40px, 0)", opacity: 0 },
+              { transform: "translate3d(0, 0, 0)", opacity: 1 },
+            ],
+            { duration: 420, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" }
+          );
+          sAnim.onfinish = () => clearModalMotionInline(sheet);
+        });
+      });
+      return;
+    }
+
+    void root.offsetHeight;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        root.classList.add(MODAL_MOTION_CLASS);
+      });
     });
   }
 
   function endModalMotion(root) {
-    if (root) root.classList.remove(MODAL_MOTION_CLASS);
+    if (!root) return;
+    root.classList.remove(MODAL_MOTION_CLASS);
+    root
+      .querySelectorAll(
+        ".auth-modal__sheet, .profile-modal__sheet, .picker__sheet, .lesson-modal__sheet, .auth-modal__backdrop, .profile-modal__backdrop, .picker__backdrop, .lesson-modal__backdrop"
+      )
+      .forEach((el) => {
+        cancelElAnimations(el);
+        clearModalMotionInline(el);
+      });
   }
 
   function playLandingMotion(root) {
     if (!root || root.hidden) return;
     root.classList.remove(LANDING_MOTION_CLASS);
-    void root.offsetWidth;
-    requestAnimationFrame(() => {
+
+    const title = root.querySelector(".landing-title");
+    const enter = root.querySelector(".landing-enter");
+
+    if (prefersReducedMotion()) {
+      clearModalMotionInline(title);
+      clearModalMotionInline(enter);
       root.classList.add(LANDING_MOTION_CLASS);
+      return;
+    }
+
+    if (title && typeof title.animate === "function") {
+      cancelElAnimations(title);
+      cancelElAnimations(enter);
+
+      title.style.opacity = "0";
+      title.style.transform = "translate3d(0, 20px, 0) scale(0.96)";
+      if (enter) {
+        enter.style.opacity = "0";
+        enter.style.transform = "translate3d(0, 20px, 0) scale(0.96)";
+      }
+
+      void root.offsetHeight;
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const kf = [
+            { opacity: 0, transform: "translate3d(0, 20px, 0) scale(0.96)" },
+            { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" },
+          ];
+          const opt = {
+            duration: 520,
+            easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+            fill: "forwards",
+          };
+          const a1 = title.animate(kf, opt);
+          a1.onfinish = () => clearModalMotionInline(title);
+          if (enter && typeof enter.animate === "function") {
+            const a2 = enter.animate(kf, { ...opt, delay: 110 });
+            a2.onfinish = () => clearModalMotionInline(enter);
+          }
+        });
+      });
+      return;
+    }
+
+    void root.offsetHeight;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        root.classList.add(LANDING_MOTION_CLASS);
+      });
     });
   }
 
@@ -227,8 +360,10 @@
       }
     };
     requestAnimationFrame(() => {
-      const nodes = getFocusables(root);
-      if (nodes.length) nodes[0].focus();
+      requestAnimationFrame(() => {
+        const nodes = getFocusables(root);
+        if (nodes.length) nodes[0].focus();
+      });
     });
   }
 
@@ -889,6 +1024,10 @@
     const app = $("#shell-app");
     if (landing) {
       landing.classList.remove(LANDING_MOTION_CLASS);
+      landing.querySelectorAll(".landing-title, .landing-enter").forEach((el) => {
+        cancelElAnimations(el);
+        clearModalMotionInline(el);
+      });
       landing.hidden = true;
     }
     if (app) app.hidden = false;
