@@ -952,6 +952,17 @@
     const tabLogin = $("#auth-tab-login");
     const tabReg = $("#auth-tab-register");
     const reqRegIds = ["auth-last-name", "auth-first-name", "auth-patronymic"];
+    // Показываем демо-подсказки только локально или при явном включении параметром ?demo=1
+    const showDemoHints = (() => {
+      try {
+        const p = new URLSearchParams(location.search);
+        if (p.get("demo") === "1") return true;
+        return location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      } catch {
+        return false;
+      }
+    })();
+
     if (mode === "register") {
       if (title) title.textContent = "Регистрация";
       if (submit) submit.textContent = "Создать аккаунт";
@@ -967,7 +978,17 @@
       if (title) title.textContent = "Вход в систему";
       if (submit) submit.textContent = "Войти";
       if (regExtra) regExtra.hidden = true;
-      if (loginHints) loginHints.hidden = false;
+      if (loginHints) {
+        loginHints.hidden = !showDemoHints;
+        if (showDemoHints) {
+          // Вставляем креды только для локального запуска / ?demo=1,
+          // чтобы они не светились в HTML исходнике на публичном деплое.
+          loginHints.innerHTML =
+            "<strong>Демо-аккаунты (для проверки):</strong><br />" +
+            "Родитель — <code>Roditel@yandex.ru</code>, пароль <code>1234</code><br />" +
+            "Учитель — <code>Uchitel@yandex.ru</code>, пароль <code>0987</code>";
+        }
+      }
       reqRegIds.forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.required = false;

@@ -3,6 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Электронный дневник с ролью родитель/учитель: дневник по датам, успеваемость, итоговые и редактирование уроков."
+    />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta property="og:title" content="Электронный дневник" />
+    <meta
+      property="og:description"
+      content="Прототип электронного дневника: роль-based доступ, Express + TypeScript, PostgreSQL и деплой на Vercel."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://programma-trofima-dnevnik.vercel.app/" />
+    <meta name="twitter:card" content="summary" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <title>Электронный дневник</title>
@@ -628,10 +641,9 @@
               </select>
             </label>
           </div>
-          <p id="auth-login-hints" class="auth-hints">
-            <strong>Для учебных целей (вход):</strong><br />
-            Родитель — <code>Roditel@yandex.ru</code>, пароль <code>1234</code><br />
-            Учитель — <code>Uchitel@yandex.ru</code>, пароль <code>0987</code>
+          <p id="auth-login-hints" class="auth-hints" hidden>
+            Демо-аккаунты доступны только для локального запуска или при открытии с
+            <code>?demo=1</code>.
           </p>
           <p id="auth-error" class="auth-error" role="alert" hidden></p>
           <div class="auth-actions">

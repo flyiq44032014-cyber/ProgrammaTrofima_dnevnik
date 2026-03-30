@@ -2,6 +2,8 @@ import "dotenv/config";
 import cookieSession from "cookie-session";
 import express from "express";
 import path from "path";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { requireParent, requireTeacher } from "./middleware/auth";
 import { apiRouter } from "./routes/api";
 import { authRouter } from "./routes/auth";
@@ -9,6 +11,9 @@ import { profileRouter } from "./routes/profile";
 import { teacherRouter } from "./routes/teacher";
 
 const app = express();
+
+app.disable("x-powered-by");
+app.use(helmet());
 
 app.set("trust proxy", 1);
 
@@ -34,6 +39,34 @@ app.use("/api", (_req, res, next) => {
   next();
 });
 
+// Basic protection against brute-force / abuse on auth + writes.
+// Note: for full CSRF protection we'd add tokens on the frontend; cookie `sameSite=lax`
+// already mitigates the most common CSRF vectors.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const teacherLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const profileLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use("/api/auth", authLimiter);
+app.use("/api/teacher", teacherLimiter);
+app.use("/api/profile", profileLimiter);
+
 app.use("/api/auth", authRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/teacher", requireTeacher, teacherRouter);
@@ -44,11 +77,17 @@ app.use(
   express.static(publicDir, {
     etag: false,
     lastModified: false,
-    maxAge: 0,
     setHeaders(res, filePath) {
-      if (/\.(html|js|css)$/.test(filePath)) {
-        res.set("Cache-Control", "no-store");
+      if (/\.html$/.test(filePath)) {
+        res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        return;
       }
+      if (/\.js$/.test(filePath) || /\.css$/.test(filePath)) {
+        // index.html references app.js/app.css with `?v=...` so immutable caching is safe.
+        res.set("Cache-Control", "public, max-age=31536000, immutable");
+        return;
+      }
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
     },
   })
 );
