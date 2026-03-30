@@ -1,30 +1,28 @@
 import { Router } from "express";
 import { requireAuth, requireParent, requireTeacher } from "../middleware/auth";
 import * as profile from "../profile/service";
+import { catchAsync } from "../middleware/catchAsync";
 
 export const profileRouter = Router();
 
 profileRouter.use(requireAuth);
 
 profileRouter.get("/", async (req, res) => {
-  try {
-    const uid = req.session!.uid!;
-    const role = req.session!.role!;
-    const email = req.session!.email ?? "";
-    const data = await profile.getProfile(uid, role, email);
-    if (!data) {
-      res.status(404).json({ error: "Пользователь не найден" });
-      return;
-    }
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Ошибка сервера" });
+  const uid = req.session!.uid!;
+  const role = req.session!.role!;
+  const email = req.session!.email ?? "";
+  const data = await profile.getProfile(uid, role, email);
+  if (!data) {
+    res.status(404).json({ error: "Пользователь не найден" });
+    return;
   }
+  res.json(data);
 });
 
-profileRouter.post("/children", requireParent, async (req, res) => {
-  try {
+profileRouter.post(
+  "/children",
+  requireParent,
+  catchAsync(async (req, res) => {
     const lastName = String(req.body?.lastName ?? "").trim();
     const firstName = String(req.body?.firstName ?? "").trim();
     const patronymic = String(req.body?.patronymic ?? "").trim();
@@ -40,14 +38,13 @@ profileRouter.post("/children", requireParent, async (req, res) => {
       classLabel,
     });
     res.json({ child: row });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Ошибка сервера" });
-  }
-});
+  }, { error: "Ошибка сервера" })
+);
 
-profileRouter.post("/classes", requireTeacher, async (req, res) => {
-  try {
+profileRouter.post(
+  "/classes",
+  requireTeacher,
+  catchAsync(async (req, res) => {
     const label = String(req.body?.label ?? "").trim();
     if (!label) {
       res.status(400).json({ error: "Укажите название класса" });
@@ -65,8 +62,5 @@ profileRouter.post("/classes", requireTeacher, async (req, res) => {
     }
     const row = await profile.addTeacherClass(req.session!.uid!, { label, grade });
     res.json({ class: row });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Ошибка сервера" });
-  }
-});
+  }, { error: "Ошибка сервера" })
+);

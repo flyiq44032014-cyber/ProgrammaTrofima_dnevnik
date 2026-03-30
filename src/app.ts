@@ -26,7 +26,8 @@ app.use(
   })
 );
 
-app.use(express.json());
+// Лимит на размер JSON тела защищает сервер и предотвращает случайно огромные payload.
+app.use(express.json({ limit: "200kb" }));
 app.use("/api", (_req, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
   res.set("Pragma", "no-cache");
