@@ -1,20 +1,20 @@
-﻿<!DOCTYPE html>
+?<!DOCTYPE html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
-    <title>Р­Р»РµРєС‚СЂРѕРЅРЅС‹Р№ РґРЅРµРІРЅРёРє</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.2.11" />
+    <title>Электронный дневник</title>
+    <link rel="stylesheet" href="/css/app.css?v=1.2.12" />
   </head>
   <body>
     <div id="app-announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
     <div class="app-bg" aria-hidden="true"></div>
 
     <div id="shell-landing" class="shell-landing">
-      <h1 class="landing-title">Р­Р»РµРєС‚СЂРѕРЅРЅС‹Р№ РґРЅРµРІРЅРёРє</h1>
-      <button type="button" class="landing-enter" id="open-auth">Р’С…РѕРґ</button>
+      <h1 class="landing-title">Электронный дневник</h1>
+      <button type="button" class="landing-enter" id="open-auth">Вход</button>
     </div>
 
     <svg xmlns="http://www.w3.org/2000/svg" class="bn-icons-sprite" aria-hidden="true" focusable="false">
@@ -88,27 +88,27 @@
     <div id="picker" class="picker" hidden>
       <div class="picker__backdrop"></div>
       <div class="picker__sheet" role="dialog" aria-labelledby="picker-title">
-        <div class="picker__title" id="picker-title">РљС‚Рѕ СѓС‡РёС‚СЃСЏ?</div>
+        <div class="picker__title" id="picker-title">Кто учится?</div>
         <ul id="picker-list" class="picker__list"></ul>
-        <button type="button" class="picker__close" id="picker-close">РћС‚РјРµРЅР°</button>
+        <button type="button" class="picker__close" id="picker-close">Отмена</button>
       </div>
     </div>
 
     <header class="topbar">
       <div class="topbar__left">
         <button type="button" class="topbar__who" id="open-picker">
-          <span class="topbar__name" id="hdr-name">вЂ”</span>
-          <span class="topbar__class" id="hdr-class">вЂ”</span>
+          <span class="topbar__name" id="hdr-name">—</span>
+          <span class="topbar__class" id="hdr-class">—</span>
         </button>
       </div>
       <div class="topbar__right-cluster">
         <div class="topbar__profile-wrap">
           <span class="topbar__ctrl-hint" aria-hidden="true">&#8203;</span>
-          <button type="button" class="btn-profile" id="open-profile">РџСЂРѕС„РёР»СЊ</button>
+          <button type="button" class="btn-profile" id="open-profile">Профиль</button>
         </div>
         <div class="topbar__logout-wrap">
           <span class="topbar__ctrl-hint" aria-hidden="true">&#8203;</span>
-          <button type="button" class="btn-logout" id="btn-logout">Р’С‹С…РѕРґ</button>
+          <button type="button" class="btn-logout" id="btn-logout">Выход</button>
         </div>
       </div>
     </header>
@@ -116,8 +116,8 @@
     <main class="main" id="shell-parent">
       <section id="view-diary" class="view" data-view="diary">
         <div class="diary-wrap">
-          <button type="button" class="diary-nav-btn" id="diary-prev" aria-label="РџСЂРµРґС‹РґСѓС‰РёР№ РґРµРЅСЊ">
-            вЂ№
+          <button type="button" class="diary-nav-btn" id="diary-prev" aria-label="Предыдущий день">
+            ‹
           </button>
           <div class="card card--paper diary-card" id="diary-card">
             <div class="card-head">
@@ -128,20 +128,20 @@
                 </svg>
               </div>
               <div class="date-ribbon" id="diary-date-banner">
-                <span class="date-ribbon__num" id="diary-day-num">вЂ”</span>
+                <span class="date-ribbon__num" id="diary-day-num">—</span>
                 <div class="date-ribbon__rest">
-                  <span id="diary-weekday">вЂ”</span>
-                  <span id="diary-month-y">вЂ”</span>
+                  <span id="diary-weekday">—</span>
+                  <span id="diary-month-y">—</span>
                 </div>
               </div>
             </div>
             <p class="swipe-hint">
-              РљРЅРѕРїРєРё РїРѕ Р±РѕРєР°Рј РёР»Рё СЃРІР°Р№Рї: РІР»РµРІРѕ вЂ” СЃР»РµРґСѓСЋС‰РёР№ РґРµРЅСЊ, РІРїСЂР°РІРѕ вЂ” РїСЂРµРґС‹РґСѓС‰РёР№
+              Кнопки по бокам или свайп: влево — следующий день, вправо — предыдущий
             </p>
             <div id="diary-lessons" class="lessons"></div>
           </div>
-          <button type="button" class="diary-nav-btn" id="diary-next" aria-label="РЎР»РµРґСѓСЋС‰РёР№ РґРµРЅСЊ">
-            вЂє
+          <button type="button" class="diary-nav-btn" id="diary-next" aria-label="Следующий день">
+            ›
           </button>
         </div>
       </section>
@@ -156,14 +156,14 @@
               </svg>
             </div>
             <div class="date-ribbon date-ribbon--wide" id="perf-date-banner">
-              <span class="date-ribbon__line" id="perf-date-line">вЂ”</span>
+              <span class="date-ribbon__line" id="perf-date-line">—</span>
             </div>
           </div>
-          <div class="trimester" id="perf-trimester">вЂ”</div>
+          <div class="trimester" id="perf-trimester">—</div>
           <div class="legend">
-            <span><i class="lg lg--stu"></i> СѓС‡РµРЅРёРє</span>
-            <span><i class="lg lg--cls"></i> РєР»Р°СЃСЃ</span>
-            <span><i class="lg lg--par"></i> РїР°СЂР°Р»Р»РµР»СЊ</span>
+            <span><i class="lg lg--stu"></i> ученик</span>
+            <span><i class="lg lg--cls"></i> класс</span>
+            <span><i class="lg lg--par"></i> параллель</span>
           </div>
           <div id="perf-rows" class="perf-rows"></div>
         </div>
@@ -177,11 +177,11 @@
               </svg>
             </div>
             <div class="date-ribbon date-ribbon--wide">
-              <span class="date-ribbon__line" id="grades-banner-date">вЂ”</span>
+              <span class="date-ribbon__line" id="grades-banner-date">—</span>
             </div>
           </div>
-          <div class="grades-title" id="grades-subject-title">Р’СЃРµ РїСЂРµРґРјРµС‚С‹</div>
-          <button type="button" class="back-link" id="grades-back">в†ђ Рљ РґРёР°РіСЂР°РјРјР°Рј</button>
+          <div class="grades-title" id="grades-subject-title">Все предметы</div>
+          <button type="button" class="back-link" id="grades-back">← К диаграммам</button>
           <div id="grades-list" class="grades-list"></div>
         </div>
       </section>
@@ -196,13 +196,13 @@
               </svg>
             </div>
             <div class="date-ribbon date-ribbon--year" id="finals-year-ribbon">
-              <span id="finals-year">вЂ”</span>
+              <span id="finals-year">—</span>
             </div>
           </div>
           <div class="finals-head">
-            <span class="finals-head__subj">РџСЂРµРґРјРµС‚</span>
+            <span class="finals-head__subj">Предмет</span>
             <div class="finals-head__tabs">
-              <span>1T</span><span>2T</span><span>3T</span><span>Р“</span>
+              <span>1T</span><span>2T</span><span>3T</span><span>Г</span>
             </div>
           </div>
           <div id="finals-rows" class="finals-rows"></div>
@@ -212,69 +212,69 @@
       <section id="view-meetings" class="view view--hidden" data-view="meetings">
         <div class="card card--paper" id="meetings-panel">
           <div class="table-scroll">
-            <table class="data-table" aria-label="РЎРѕР±СЂР°РЅРёСЏ">
+            <table class="data-table" aria-label="Собрания">
               <thead>
                 <tr>
-                  <th>Р”Р°С‚Р°</th>
-                  <th>Р’СЂРµРјСЏ</th>
-                  <th>РўРµРјР°</th>
+                  <th>Дата</th>
+                  <th>Время</th>
+                  <th>Тема</th>
                 </tr>
               </thead>
               <tbody id="meetings-tbody"></tbody>
             </table>
           </div>
-          <p class="placeholder-msg" id="meetings-empty" hidden>РџРѕРєР° РїР»Р°РЅРѕРІС‹С… СЃРѕР±СЂР°РЅРёР№ РЅРµС‚</p>
-          <p class="placeholder-msg" id="meetings-msg">Р—Р°РіСЂСѓР·РєР°вЂ¦</p>
+          <p class="placeholder-msg" id="meetings-empty" hidden>Пока плановых собраний нет</p>
+          <p class="placeholder-msg" id="meetings-msg">Загрузка…</p>
         </div>
       </section>
     </main>
 
-    <nav class="bottomnav" aria-label="Р Р°Р·РґРµР»С‹">
+    <nav class="bottomnav" aria-label="Разделы">
       <button type="button" class="bn-item is-active" data-tab="diary">
         <span class="bn-ico" aria-hidden="true"
           ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-diary" /></svg
         ></span>
-        <span>Р”РЅРµРІРЅРёРє</span>
+        <span>Дневник</span>
       </button>
       <button type="button" class="bn-item" data-tab="performance">
         <span class="bn-ico" aria-hidden="true"
           ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-chart" /></svg
         ></span>
-        <span>РЈСЃРїРµРІР°РµРјРѕСЃС‚СЊ</span>
+        <span>Успеваемость</span>
       </button>
       <button type="button" class="bn-item" data-tab="meetings">
         <span class="bn-ico" aria-hidden="true"
           ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-people" /></svg
         ></span>
-        <span>РЎРѕР±СЂР°РЅРёРµ</span>
+        <span>Собрание</span>
       </button>
       <button type="button" class="bn-item" data-tab="finals">
         <span class="bn-ico" aria-hidden="true"
           ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-list" /></svg
         ></span>
-        <span>РС‚РѕРіРѕРІС‹Рµ</span>
+        <span>Итоговые</span>
       </button>
     </nav>
 
     <div id="shell-teacher" class="shell-teacher view--hidden" hidden>
       <main class="main main--teacher">
         <div class="teacher-head card card--paper">
-          <div class="teacher-head__title" id="teacher-profile">вЂ”</div>
+          <div class="teacher-head__title" id="teacher-profile">—</div>
           <p class="teacher-head__hint">
-            РљР»Р°СЃСЃ РІС‹Р±РёСЂР°РµС‚СЃСЏ РІ С€Р°РїРєРµ. РќР° РІРєР»Р°РґРєРµ В«Р–СѓСЂРЅР°Р»В» РІРёРґРЅС‹ СѓСЂРѕРєРё: СЂРµРґР°РєС‚РёСЂРѕРІР°С‚СЊ РјРѕР¶РЅРѕ С‚РѕР»СЊРєРѕ С…РёРјРёСЋ. РўР°Р±Р»РёС†Р° РЅРёР¶Рµ вЂ” РѕС†РµРЅРєРё Рё РїРѕСЃРµС‰Р°РµРјРѕСЃС‚СЊ РЅР° СѓСЂРѕРєРµ С…РёРјРёРё Р·Р° РІС‹Р±СЂР°РЅРЅС‹Р№ РґРµРЅСЊ.
+            Класс выбирается в шапке. На вкладке «Журнал» видны уроки: редактировать можно только химию. Таблица ниже — оценки и посещаемость на уроке химии за выбранный день.
           </p>
         </div>
 
         <section id="t-view-diary" class="t-view">
           <div class="diary-wrap teacher-diary-wrap">
-            <button type="button" class="diary-nav-btn" id="t-diary-prev" aria-label="РџСЂРµРґС‹РґСѓС‰РёР№ РґРµРЅСЊ">вЂ№</button>
+            <button type="button" class="diary-nav-btn" id="t-diary-prev" aria-label="Предыдущий день">‹</button>
             <div class="card card--paper diary-card" id="t-diary-card">
               <div class="card-head">
                 <button
                   type="button"
                   class="cal-ico cal-ico--btn"
                   id="t-cal-open"
-                  aria-label="РћС‚РєСЂС‹С‚СЊ РєР°Р»РµРЅРґР°СЂСЊ"
+                  aria-label="Открыть календарь"
                 >
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <rect x="3" y="5" width="18" height="16" rx="2" stroke="white" stroke-width="1.6" />
@@ -282,26 +282,26 @@
                   </svg>
                 </button>
                 <div class="date-ribbon" id="t-date-banner">
-                  <span class="date-ribbon__num" id="t-day-num">вЂ”</span>
+                  <span class="date-ribbon__num" id="t-day-num">—</span>
                   <div class="date-ribbon__rest">
-                    <span id="t-weekday">вЂ”</span>
-                    <span id="t-month-y">вЂ”</span>
+                    <span id="t-weekday">—</span>
+                    <span id="t-month-y">—</span>
                   </div>
                 </div>
               </div>
               <p class="swipe-hint t-swipe-hint">
-                РљРЅРѕРїРєРё РїРѕ Р±РѕРєР°Рј РёР»Рё СЃРІР°Р№Рї: СЃРјРµРЅР° РґРЅСЏ, РєР°Рє Сѓ СЂРѕРґРёС‚РµР»РµР№
+                Кнопки по бокам или свайп: смена дня, как у родителей
               </p>
               <div id="t-lessons" class="lessons lessons--teacher"></div>
               <div class="chem-table-block" id="chem-table-block">
-                <div class="chem-table-title">РҐРёРјРёСЏ: РѕС†РµРЅРєРё Рё РїРѕСЃРµС‰Р°РµРјРѕСЃС‚СЊ Р·Р° РґРµРЅСЊ</div>
+                <div class="chem-table-title">Химия: оценки и посещаемость за день</div>
                 <div class="table-scroll">
-                  <table class="data-table" id="t-chem-table" aria-label="РЈС‡РµРЅРёРєРё Рё РѕС†РµРЅРєРё Р·Р° СѓСЂРѕРє С…РёРјРёРё">
+                  <table class="data-table" id="t-chem-table" aria-label="Ученики и оценки за урок химии">
                     <thead>
                       <tr>
-                        <th>Р¤Р°РјРёР»РёСЏ РРјСЏ</th>
-                        <th>РћС†РµРЅРєР°</th>
-                        <th>РџРѕСЃРµС‰.</th>
+                        <th>Фамилия Имя</th>
+                        <th>Оценка</th>
+                        <th>Посещ.</th>
                       </tr>
                     </thead>
                     <tbody id="t-chem-tbody"></tbody>
@@ -309,57 +309,57 @@
                 </div>
               </div>
             </div>
-            <button type="button" class="diary-nav-btn" id="t-diary-next" aria-label="РЎР»РµРґСѓСЋС‰РёР№ РґРµРЅСЊ">вЂє</button>
+            <button type="button" class="diary-nav-btn" id="t-diary-next" aria-label="Следующий день">›</button>
           </div>
         </section>
 
         <section id="t-view-pupil" class="t-view view--hidden">
           <div class="card card--paper">
-            <button type="button" class="teacher-pupil-btn" id="t-open-pupil-picker">Р’С‹Р±СЂР°С‚СЊ СѓС‡РµРЅРёРєР°</button>
+            <button type="button" class="teacher-pupil-btn" id="t-open-pupil-picker">Выбрать ученика</button>
             <div id="t-pupil-stats" class="t-pupil-stats"></div>
           </div>
         </section>
 
         <section id="t-view-tmeet" class="t-view view--hidden">
           <form id="t-meeting-form" class="card card--paper teacher-meeting-form">
-            <h3 class="tm-form-title">РЎРѕР±СЂР°РЅРёРµ РґР»СЏ СЂРѕРґРёС‚РµР»РµР№ РєР»Р°СЃСЃР°</h3>
+            <h3 class="tm-form-title">Собрание для родителей класса</h3>
             <label class="tm-field"
-              >Р”Р°С‚Р° СЃРѕР±СЂР°РЅРёСЏ
+              >Дата собрания
               <input type="date" id="t-meeting-date" name="date" required />
             </label>
             <label class="tm-field"
-              >Р’СЂРµРјСЏ
+              >Время
               <input type="time" id="t-meeting-time" name="time" required />
             </label>
             <label class="tm-field"
-              >РўРµРјР°
-              <textarea id="t-meeting-topic" name="topic" rows="3" required placeholder="РўРµРјР° СЃРѕР±СЂР°РЅРёСЏ"></textarea>
+              >Тема
+              <textarea id="t-meeting-topic" name="topic" rows="3" required placeholder="Тема собрания"></textarea>
             </label>
-            <button type="submit" class="tm-submit">РЎРѕР·РґР°С‚СЊ СЃРѕР±СЂР°РЅРёРµ</button>
+            <button type="submit" class="tm-submit">Создать собрание</button>
           </form>
 
           <div class="card card--paper">
-            <div class="chem-table-title" style="margin-bottom: 10px;">РџР»Р°РЅРѕРІС‹Рµ СЃРѕР±СЂР°РЅРёСЏ</div>
+            <div class="chem-table-title" style="margin-bottom: 10px;">Плановые собрания</div>
             <div class="table-scroll">
-              <table class="data-table" aria-label="РџР»Р°РЅРѕРІС‹Рµ СЃРѕР±СЂР°РЅРёСЏ">
+              <table class="data-table" aria-label="Плановые собрания">
                 <thead>
                   <tr>
-                    <th>Р”Р°С‚Р°</th>
-                    <th>Р’СЂРµРјСЏ</th>
-                    <th>РўРµРјР°</th>
+                    <th>Дата</th>
+                    <th>Время</th>
+                    <th>Тема</th>
                   </tr>
                 </thead>
                 <tbody id="t-meetings-tbody"></tbody>
               </table>
             </div>
-            <p class="placeholder-msg" id="t-meetings-empty" hidden>РџРѕРєР° РїР»Р°РЅРѕРІС‹С… СЃРѕР±СЂР°РЅРёР№ РЅРµС‚</p>
-            <p class="placeholder-msg" id="t-meetings-msg">Р—Р°РіСЂСѓР·РєР°вЂ¦</p>
+            <p class="placeholder-msg" id="t-meetings-empty" hidden>Пока плановых собраний нет</p>
+            <p class="placeholder-msg" id="t-meetings-msg">Загрузка…</p>
           </div>
         </section>
 
         <section id="t-view-quarters" class="t-view view--hidden">
           <div class="card card--paper">
-            <div class="chem-table-title">РЎРІРѕРґРєР° РїРѕ С‡РµС‚РІРµСЂС‚СЏРј (РєР»Р°СЃСЃ)</div>
+            <div class="chem-table-title">Сводка по четвертям (класс)</div>
             <p class="tm-quarter-hint" id="t-quarter-hint"></p>
             <div class="table-scroll">
               <table class="data-table data-table--quarters" id="t-quarters-table">
@@ -371,30 +371,30 @@
         </section>
       </main>
 
-      <nav class="bottomnav bottomnav--teacher" id="teacher-bottomnav" aria-label="Р Р°Р·РґРµР»С‹ СѓС‡РёС‚РµР»СЏ" hidden>
+      <nav class="bottomnav bottomnav--teacher" id="teacher-bottomnav" aria-label="Разделы учителя" hidden>
         <button type="button" class="bn-item is-active" data-teacher-tab="diary">
           <span class="bn-ico" aria-hidden="true"
             ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-diary" /></svg
           ></span>
-          <span>Р–СѓСЂРЅР°Р»</span>
+          <span>Журнал</span>
         </button>
         <button type="button" class="bn-item" data-teacher-tab="pupil">
           <span class="bn-ico" aria-hidden="true"
             ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-chart" /></svg
           ></span>
-          <span>РЈСЃРїРµРІР°РµРјРѕСЃС‚СЊ</span>
+          <span>Успеваемость</span>
         </button>
         <button type="button" class="bn-item" data-teacher-tab="tmeet">
           <span class="bn-ico" aria-hidden="true"
             ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-people" /></svg
           ></span>
-          <span>РЎРѕР±СЂР°РЅРёРµ</span>
+          <span>Собрание</span>
         </button>
         <button type="button" class="bn-item" data-teacher-tab="quarters">
           <span class="bn-ico" aria-hidden="true"
             ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-list" /></svg
           ></span>
-          <span>РС‚РѕРіРѕРІС‹Рµ</span>
+          <span>Итоговые</span>
         </button>
       </nav>
     </div>
@@ -403,42 +403,42 @@
       <div class="lesson-modal__backdrop" id="t-cal-backdrop"></div>
       <div class="lesson-modal__sheet t-cal-sheet" role="dialog" aria-modal="true" aria-labelledby="t-cal-title">
         <div class="t-cal-head">
-          <button type="button" class="t-cal-navbtn" id="t-cal-prev" aria-label="РџСЂРµРґС‹РґСѓС‰РёР№ РјРµСЃСЏС†">вЂ№</button>
-          <h2 class="lesson-modal__h t-cal-title" id="t-cal-title">вЂ”</h2>
-          <button type="button" class="t-cal-navbtn" id="t-cal-next" aria-label="РЎР»РµРґСѓСЋС‰РёР№ РјРµСЃСЏС†">вЂє</button>
+          <button type="button" class="t-cal-navbtn" id="t-cal-prev" aria-label="Предыдущий месяц">‹</button>
+          <h2 class="lesson-modal__h t-cal-title" id="t-cal-title">—</h2>
+          <button type="button" class="t-cal-navbtn" id="t-cal-next" aria-label="Следующий месяц">›</button>
         </div>
-        <p class="t-cal-hint">РЎСѓР±Р±РѕС‚Р° Рё РІРѕСЃРєСЂРµСЃРµРЅСЊРµ РЅРµ РІС‹Р±РёСЂР°СЋС‚СЃСЏ. Р”РѕСЃС‚СѓРїРЅС‹ СѓС‡РµР±РЅС‹Рµ РґРЅРё РёР· СЂР°СЃРїРёСЃР°РЅРёСЏ РєР»Р°СЃСЃР°.</p>
+        <p class="t-cal-hint">Суббота и воскресенье не выбираются. Доступны учебные дни из расписания класса.</p>
         <div class="t-cal-dow-row" aria-hidden="true">
-          <span>РџРЅ</span><span>Р’С‚</span><span>РЎСЂ</span><span>Р§С‚</span><span>РџС‚</span><span class="t-cal-dow--weekend">РЎР±</span><span class="t-cal-dow--weekend">Р’СЃ</span>
+          <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span class="t-cal-dow--weekend">Сб</span><span class="t-cal-dow--weekend">Вс</span>
         </div>
         <div id="t-cal-grid" class="t-cal-grid"></div>
-        <button type="button" class="t-cal-close" id="t-cal-close">Р—Р°РєСЂС‹С‚СЊ</button>
+        <button type="button" class="t-cal-close" id="t-cal-close">Закрыть</button>
       </div>
     </div>
 
     <div id="t-pupil-picker" class="picker picker--t-pupil" hidden>
       <div class="picker__backdrop" id="t-pupil-picker-backdrop"></div>
-      <div class="picker__sheet picker__sheet--t-pupil" role="dialog" aria-label="Р’С‹Р±РѕСЂ СѓС‡РµРЅРёРєР°">
-        <div class="picker__title picker__title--t-pupil">РЈС‡РµРЅРёРє РєР»Р°СЃСЃР°</div>
+      <div class="picker__sheet picker__sheet--t-pupil" role="dialog" aria-label="Выбор ученика">
+        <div class="picker__title picker__title--t-pupil">Ученик класса</div>
         <div class="picker__scroll picker__scroll--pupil">
           <ul id="t-pupil-list" class="picker__list picker__list--t-pupil"></ul>
         </div>
-        <button type="button" class="picker__close" id="t-pupil-picker-close">РћС‚РјРµРЅР°</button>
+        <button type="button" class="picker__close" id="t-pupil-picker-close">Отмена</button>
       </div>
     </div>
 
     <div id="student-chem-modal" class="lesson-modal" hidden>
       <div class="lesson-modal__backdrop" id="student-chem-backdrop"></div>
       <div class="lesson-modal__sheet" role="dialog" aria-labelledby="scm-title">
-        <h2 class="lesson-modal__h" id="scm-title">РЈС‡РµРЅРёРє</h2>
+        <h2 class="lesson-modal__h" id="scm-title">Ученик</h2>
         <p id="scm-form-error" class="form-err" role="alert" hidden></p>
         <p class="scm-hint">
-          РћС†РµРЅРєР° Р·Р° СѓСЂРѕРє С…РёРјРёРё Рё РѕС‚РјРµС‚РєР° РѕР± РѕС‚СЃСѓС‚СЃС‚РІРёРё (РЅ). РџСЂРё РїСЂРѕРїСѓСЃРєРµ РѕС†РµРЅРєР° РЅРµ СЃС‚Р°РІРёС‚СЃСЏ.
+          Оценка за урок химии и отметка об отсутствии (н). При пропуске оценка не ставится.
         </p>
         <label class="tm-field"
-          >РћС†РµРЅРєР° Р·Р° СѓСЂРѕРє
+          >Оценка за урок
           <select id="scm-grade">
-            <option value="">вЂ” РЅРµС‚ РѕС†РµРЅРєРё</option>
+            <option value="">— нет оценки</option>
             <option value="2">2</option>
             <option value="3">3</option>
             <option value="4">4</option>
@@ -447,11 +447,11 @@
         </label>
         <label class="tm-check">
           <input type="checkbox" id="scm-absent" />
-          РћС‚СЃСѓС‚СЃС‚РІСѓРµС‚ (РІ Р¶СѓСЂРЅР°Р»Рµ вЂ” РЅ)
+          Отсутствует (в журнале — н)
         </label>
         <div class="lesson-modal__actions">
-          <button type="button" class="btn-cancel" id="scm-cancel">РћС‚РјРµРЅР°</button>
-          <button type="button" class="btn-save" id="scm-save">РЎРѕС…СЂР°РЅРёС‚СЊ</button>
+          <button type="button" class="btn-cancel" id="scm-cancel">Отмена</button>
+          <button type="button" class="btn-save" id="scm-save">Сохранить</button>
         </div>
       </div>
     </div>
@@ -459,22 +459,22 @@
     <div id="lesson-modal" class="lesson-modal" hidden>
       <div class="lesson-modal__backdrop"></div>
       <div class="lesson-modal__sheet" role="dialog" aria-labelledby="lm-title">
-        <h2 class="lesson-modal__h" id="lm-title">Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ СѓСЂРѕРє</h2>
+        <h2 class="lesson-modal__h" id="lm-title">Редактировать урок</h2>
         <p id="lm-form-error" class="form-err" role="alert" hidden></p>
         <form id="lesson-form" class="lesson-form">
           <input type="hidden" id="lm-lesson-id" />
-          <label>РџСЂРµРґРјРµС‚ <input type="text" id="lm-title-in" name="title" required /></label>
-          <label>Р’СЂРµРјСЏ <input type="text" id="lm-time" name="timeLabel" /></label>
-          <label>РџСЂРµРїРѕРґР°РІР°С‚РµР»СЊ <input type="text" id="lm-teacher" name="teacher" /></label>
-          <label>РўРµРјР° <input type="text" id="lm-topic" name="topic" /></label>
-          <label>Р”РѕРјР°С€РЅРµРµ Р·Р°РґР°РЅРёРµ <textarea id="lm-hw" name="homework" rows="2"></textarea></label>
-          <label>РљРѕРЅС‚СЂРѕР»СЊРЅР°СЏ <input type="text" id="lm-ctrl" name="controlWork" /></label>
-          <label>РњРµСЃС‚Рѕ <input type="text" id="lm-place" name="place" /></label>
-          <label>Р”Р— РЅР° СЃР»РµРґ. СѓСЂРѕРє <textarea id="lm-hwn" name="homeworkNext" rows="2"></textarea></label>
-          <label>РћС†РµРЅРєР° <input type="text" id="lm-grade" name="grade" placeholder="РїСѓСЃС‚Рѕ" /></label>
+          <label>Предмет <input type="text" id="lm-title-in" name="title" required /></label>
+          <label>Время <input type="text" id="lm-time" name="timeLabel" /></label>
+          <label>Преподаватель <input type="text" id="lm-teacher" name="teacher" /></label>
+          <label>Тема <input type="text" id="lm-topic" name="topic" /></label>
+          <label>Домашнее задание <textarea id="lm-hw" name="homework" rows="2"></textarea></label>
+          <label>Контрольная <input type="text" id="lm-ctrl" name="controlWork" /></label>
+          <label>Место <input type="text" id="lm-place" name="place" /></label>
+          <label>ДЗ на след. урок <textarea id="lm-hwn" name="homeworkNext" rows="2"></textarea></label>
+          <label>Оценка <input type="text" id="lm-grade" name="grade" placeholder="пусто" /></label>
           <div class="lesson-modal__actions">
-            <button type="button" class="btn-cancel" id="lm-cancel">РћС‚РјРµРЅР°</button>
-            <button type="submit" class="btn-save">РЎРѕС…СЂР°РЅРёС‚СЊ</button>
+            <button type="button" class="btn-cancel" id="lm-cancel">Отмена</button>
+            <button type="submit" class="btn-save">Сохранить</button>
           </div>
         </form>
       </div>
@@ -489,35 +489,35 @@
         aria-modal="true"
         aria-labelledby="profile-modal-title"
       >
-        <h2 id="profile-modal-title" class="profile-modal__h">РџСЂРѕС„РёР»СЊ</h2>
+        <h2 id="profile-modal-title" class="profile-modal__h">Профиль</h2>
         <div class="profile-head">
           <div class="profile-avatar" id="profile-avatar" aria-hidden="true">?</div>
           <div class="profile-head__text">
-            <div class="profile-fio" id="profile-fio-line">вЂ”</div>
+            <div class="profile-fio" id="profile-fio-line">—</div>
             <div class="profile-email-line" id="profile-email-line"></div>
           </div>
         </div>
         <div id="profile-parent-section" class="profile-section" hidden>
-          <h3 class="profile-section__title">Р”РµС‚Рё</h3>
+          <h3 class="profile-section__title">Дети</h3>
           <ul id="profile-children-list" class="profile-list"></ul>
           <div class="profile-add">
             <label class="profile-add__label"
-              >Р¤Р°РјРёР»РёСЏ
+              >Фамилия
               <input type="text" id="prof-child-last" class="profile-add__input" autocomplete="family-name" />
             </label>
             <label class="profile-add__label"
-              >РРјСЏ
+              >Имя
               <input type="text" id="prof-child-first" class="profile-add__input" autocomplete="given-name" />
             </label>
             <label class="profile-add__label"
-              >РћС‚С‡РµСЃС‚РІРѕ
+              >Отчество
               <input type="text" id="prof-child-pat" class="profile-add__input" autocomplete="additional-name" />
             </label>
             <label class="profile-add__label"
-              >РљР»Р°СЃСЃ
+              >Класс
               <div class="profile-class-dual">
-                <select id="prof-child-grade" class="profile-add__select" aria-label="РџР°СЂР°Р»Р»РµР»СЊ, 1вЂ“11">
-                  <option value="">вЂ”</option>
+                <select id="prof-child-grade" class="profile-add__select" aria-label="Параллель, 1–11">
+                  <option value="">—</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
                   <option value="3">3</option>
@@ -530,27 +530,27 @@
                   <option value="10">10</option>
                   <option value="11">11</option>
                 </select>
-                <select id="prof-child-letter" class="profile-add__select" aria-label="Р›РёС‚РµСЂР° РєР»Р°СЃСЃР° РђвЂ“Р“">
-                  <option value="">вЂ”</option>
-                  <option value="Рђ">Рђ</option>
-                  <option value="Р‘">Р‘</option>
-                  <option value="Р’">Р’</option>
-                  <option value="Р“">Р“</option>
+                <select id="prof-child-letter" class="profile-add__select" aria-label="Литера класса А–Г">
+                  <option value="">—</option>
+                  <option value="А">А</option>
+                  <option value="Б">Б</option>
+                  <option value="В">В</option>
+                  <option value="Г">Г</option>
                 </select>
               </div>
             </label>
           </div>
-          <button type="button" class="profile-modal__add-btn" id="prof-child-add">Р”РѕР±Р°РІРёС‚СЊ</button>
+          <button type="button" class="profile-modal__add-btn" id="prof-child-add">Добавить</button>
         </div>
         <div id="profile-teacher-section" class="profile-section" hidden>
-          <h3 class="profile-section__title">РљР»Р°СЃСЃС‹</h3>
+          <h3 class="profile-section__title">Классы</h3>
           <ul id="profile-classes-list" class="profile-list"></ul>
           <div class="profile-add">
             <label class="profile-add__label"
-              >РџР°СЂР°Р»Р»РµР»СЊ Рё Р»РёС‚РµСЂР° РєР»Р°СЃСЃР°
+              >Параллель и литера класса
               <div class="profile-class-dual">
-                <select id="prof-class-grade" class="profile-add__select" aria-label="РџР°СЂР°Р»Р»РµР»СЊ, 1вЂ“11">
-                  <option value="">вЂ”</option>
+                <select id="prof-class-grade" class="profile-add__select" aria-label="Параллель, 1–11">
+                  <option value="">—</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
                   <option value="3">3</option>
@@ -563,21 +563,21 @@
                   <option value="10">10</option>
                   <option value="11">11</option>
                 </select>
-                <select id="prof-class-letter" class="profile-add__select" aria-label="Р›РёС‚РµСЂР° РєР»Р°СЃСЃР° РђвЂ“Р“">
-                  <option value="">вЂ”</option>
-                  <option value="Рђ">Рђ</option>
-                  <option value="Р‘">Р‘</option>
-                  <option value="Р’">Р’</option>
-                  <option value="Р“">Р“</option>
+                <select id="prof-class-letter" class="profile-add__select" aria-label="Литера класса А–Г">
+                  <option value="">—</option>
+                  <option value="А">А</option>
+                  <option value="Б">Б</option>
+                  <option value="В">В</option>
+                  <option value="Г">Г</option>
                 </select>
               </div>
             </label>
           </div>
-          <button type="button" class="profile-modal__add-btn" id="prof-class-add">Р”РѕР±Р°РІРёС‚СЊ</button>
+          <button type="button" class="profile-modal__add-btn" id="prof-class-add">Добавить</button>
         </div>
         <p id="profile-modal-error" class="profile-modal__err" role="alert" hidden></p>
         <div class="profile-modal__actions">
-          <button type="button" class="profile-modal__close-btn" id="profile-close">Р—Р°РєСЂС‹С‚СЊ</button>
+          <button type="button" class="profile-modal__close-btn" id="profile-close">Закрыть</button>
         </div>
       </div>
     </div>
@@ -587,14 +587,14 @@
       <div class="auth-modal__sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title">
         <p class="auth-tabs" role="tablist">
           <button type="button" class="auth-tab auth-tab--active" id="auth-tab-login" role="tab">
-            Р’С…РѕРґ
+            Вход
           </button>
-          <button type="button" class="auth-tab" id="auth-tab-register" role="tab">Р РµРіРёСЃС‚СЂР°С†РёСЏ</button>
+          <button type="button" class="auth-tab" id="auth-tab-register" role="tab">Регистрация</button>
         </p>
-        <h2 id="auth-title" class="auth-modal__h">Р’С…РѕРґ РІ СЃРёСЃС‚РµРјСѓ</h2>
+        <h2 id="auth-title" class="auth-modal__h">Вход в систему</h2>
         <form id="auth-form" class="auth-form">
           <label class="auth-field"
-            >РџРѕС‡С‚Р°
+            >Почта
             <input
               type="email"
               id="auth-email"
@@ -604,47 +604,46 @@
             />
           </label>
           <label class="auth-field"
-            >РџР°СЂРѕР»СЊ
+            >Пароль
             <input type="password" id="auth-password" name="password" autocomplete="current-password" required />
           </label>
           <div id="auth-register-extra" class="auth-register-extra" hidden>
             <label class="auth-field"
-              >Р¤Р°РјРёР»РёСЏ
+              >Фамилия
               <input type="text" id="auth-last-name" name="lastName" autocomplete="family-name" />
             </label>
             <label class="auth-field"
-              >РРјСЏ
+              >Имя
               <input type="text" id="auth-first-name" name="firstName" autocomplete="given-name" />
             </label>
             <label class="auth-field"
-              >РћС‚С‡РµСЃС‚РІРѕ
+              >Отчество
               <input type="text" id="auth-patronymic" name="patronymic" autocomplete="additional-name" />
             </label>
             <label class="auth-field"
-              >Р РѕР»СЊ
+              >Роль
               <select id="auth-role" name="role">
-                <option value="parent">Р РѕРґРёС‚РµР»СЊ</option>
-                <option value="teacher">РЈС‡РёС‚РµР»СЊ</option>
+                <option value="parent">Родитель</option>
+                <option value="teacher">Учитель</option>
               </select>
             </label>
           </div>
           <p id="auth-login-hints" class="auth-hints">
-            <strong>Р”Р»СЏ СѓС‡РµР±РЅС‹С… С†РµР»РµР№ (РІС…РѕРґ):</strong><br />
-            Р РѕРґРёС‚РµР»СЊ вЂ” <code>Roditel@yandex.ru</code>, РїР°СЂРѕР»СЊ <code>1234</code><br />
-            РЈС‡РёС‚РµР»СЊ вЂ” <code>Uchitel@yandex.ru</code>, РїР°СЂРѕР»СЊ <code>0987</code>
+            <strong>Для учебных целей (вход):</strong><br />
+            Родитель — <code>Roditel@yandex.ru</code>, пароль <code>1234</code><br />
+            Учитель — <code>Uchitel@yandex.ru</code>, пароль <code>0987</code>
           </p>
           <p id="auth-error" class="auth-error" role="alert" hidden></p>
           <div class="auth-actions">
-            <button type="button" class="auth-cancel" id="auth-cancel">РћС‚РјРµРЅР°</button>
-            <button type="submit" class="auth-submit">Р’РѕР№С‚Рё</button>
+            <button type="button" class="auth-cancel" id="auth-cancel">Отмена</button>
+            <button type="submit" class="auth-submit">Войти</button>
           </div>
         </form>
       </div>
     </div>
 
-    <script src="/js/app.js?v=1.2.11" defer></script>
+    <script src="/js/app.js?v=1.2.12" defer></script>
   </body>
 </html>
-
 
 
