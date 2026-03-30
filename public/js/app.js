@@ -11,6 +11,8 @@
   let diaryDates = [];
 
   let tab = "diary";
+  let diaryDayAnimBusy = false;
+  let teacherDiaryDayAnimBusy = false;
 
   /** 'chart' | 'grades' */
   let perfSubview = "chart";
@@ -156,6 +158,137 @@
     if (!el) return;
     el.style.opacity = "";
     el.style.transform = "";
+  }
+
+  const PARENT_TAB_ORDER = ["diary", "performance", "meetings", "finals"];
+
+  function animPromise(anim) {
+    if (!anim || typeof anim.finished === "undefined") {
+      return Promise.resolve();
+    }
+    return anim.finished.catch(() => {});
+  }
+
+  /** enterFromLeft: новый контент заезжает слева (после «ухода» старого вправо). */
+  function runSlideEnter(el, enterFromLeft) {
+    if (!el || prefersReducedMotion()) {
+      clearModalMotionInline(el);
+      return Promise.resolve();
+    }
+    if (typeof el.animate !== "function") {
+      clearModalMotionInline(el);
+      return Promise.resolve();
+    }
+    cancelElAnimations(el);
+    const fromX = enterFromLeft ? -32 : 32;
+    const inK = [
+      { transform: `translate3d(${fromX}px,0,0)`, opacity: 0 },
+      { transform: "translate3d(0,0,0)", opacity: 1 },
+    ];
+    el.style.opacity = "0";
+    el.style.transform = `translate3d(${fromX}px,0,0)`;
+    void el.offsetHeight;
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const a = el.animate(inK, {
+            duration: 300,
+            easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+            fill: "forwards",
+          });
+          animPromise(a).then(() => {
+            a.cancel();
+            clearModalMotionInline(el);
+            resolve();
+          });
+        });
+      });
+    });
+  }
+
+  function animateParentTabSwitch(fromTab, toTab, elFrom, elTo, mainEl) {
+    if (
+      prefersReducedMotion() ||
+      !elFrom ||
+      !elTo ||
+      !mainEl ||
+      typeof elFrom.animate !== "function" ||
+      typeof elTo.animate !== "function"
+    ) {
+      document.querySelectorAll("#shell-parent > .view").forEach((v) => v.classList.add("view--hidden"));
+      elTo.classList.remove("view--hidden");
+      return Promise.resolve();
+    }
+
+    document.querySelectorAll("#shell-parent > .view").forEach((v) => {
+      if (v !== elFrom && v !== elTo) v.classList.add("view--hidden");
+    });
+
+    elTo.classList.remove("view--hidden");
+
+    const forward = PARENT_TAB_ORDER.indexOf(toTab) > PARENT_TAB_ORDER.indexOf(fromTab);
+    const slide = 22;
+
+    elTo.style.opacity = "0";
+    elTo.style.transform = forward
+      ? `translate3d(${slide}px,0,0)`
+      : `translate3d(-${slide}px,0,0)`;
+    void mainEl.offsetHeight;
+
+    const h = Math.max(elFrom.offsetHeight, elTo.offsetHeight, 240);
+    mainEl.classList.add("main--view-swap");
+    mainEl.style.minHeight = `${h}px`;
+    elFrom.style.zIndex = "1";
+    elTo.style.zIndex = "2";
+
+    cancelElAnimations(elFrom);
+    cancelElAnimations(elTo);
+
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const outK = forward
+            ? [
+                { transform: "translate3d(0,0,0)", opacity: 1 },
+                { transform: `translate3d(-${slide}px,0,0)`, opacity: 0 },
+              ]
+            : [
+                { transform: "translate3d(0,0,0)", opacity: 1 },
+                { transform: `translate3d(${slide}px,0,0)`, opacity: 0 },
+              ];
+          const inK = forward
+            ? [
+                { transform: `translate3d(${slide}px,0,0)`, opacity: 0 },
+                { transform: "translate3d(0,0,0)", opacity: 1 },
+              ]
+            : [
+                { transform: `translate3d(-${slide}px,0,0)`, opacity: 0 },
+                { transform: "translate3d(0,0,0)", opacity: 1 },
+              ];
+
+          const opts = {
+            duration: 320,
+            easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+            fill: "forwards",
+          };
+          const aOut = elFrom.animate(outK, opts);
+          const aIn = elTo.animate(inK, opts);
+
+          Promise.all([animPromise(aOut), animPromise(aIn)]).then(() => {
+            aOut.cancel();
+            aIn.cancel();
+            elFrom.classList.add("view--hidden");
+            clearModalMotionInline(elFrom);
+            clearModalMotionInline(elTo);
+            elFrom.style.zIndex = "";
+            elTo.style.zIndex = "";
+            mainEl.classList.remove("main--view-swap");
+            mainEl.style.minHeight = "";
+            resolve();
+          });
+        });
+      });
+    });
   }
 
   /**
@@ -403,31 +536,56 @@
     $("#t-pupil-picker").hidden = true;
   }
 
+  function applyPerformanceSubviewVisibility() {
+    if (tab === "performance") {
+      $("#perf-chart").classList.toggle("view--hidden", perfSubview !== "chart");
+      $("#perf-grades").classList.toggle("view--hidden", perfSubview !== "grades");
+    }
+  }
+
+  function runTabDataLoads() {
+    if (tab === "performance" && perfSubview === "chart") loadPerformance();
+    if (tab === "performance" && perfSubview === "grades") loadGradesList();
+    if (tab === "finals") loadFinals();
+    if (tab === "diary") loadDiary();
+    if (tab === "meetings") loadParentMeetings();
+  }
+
   function setTab(next) {
-    tab = next;
-    document.querySelectorAll(".view").forEach((v) => v.classList.add("view--hidden"));
+    const fromTab = tab;
     const map = {
       diary: "#view-diary",
       performance: "#view-performance",
       meetings: "#view-meetings",
       finals: "#view-finals",
     };
-    $(map[next]).classList.remove("view--hidden");
+    const mainEl = $("#shell-parent");
+    const elFrom = $(map[fromTab]);
+    const elTo = $(map[next]);
+
+    tab = next;
 
     document.querySelectorAll(".bottomnav:not(.bottomnav--teacher) .bn-item").forEach((b) => {
       b.classList.toggle("is-active", b.dataset.tab === next);
     });
 
-    if (tab === "performance") {
-      $("#perf-chart").classList.toggle("view--hidden", perfSubview !== "chart");
-      $("#perf-grades").classList.toggle("view--hidden", perfSubview !== "grades");
+    applyPerformanceSubviewVisibility();
+
+    if (fromTab === next) {
+      runTabDataLoads();
+      return;
     }
 
-    if (tab === "performance" && perfSubview === "chart") loadPerformance();
-    if (tab === "performance" && perfSubview === "grades") loadGradesList();
-    if (tab === "finals") loadFinals();
-    if (tab === "diary") loadDiary();
-    if (tab === "meetings") loadParentMeetings();
+    if (!mainEl || !elFrom || !elTo) {
+      document.querySelectorAll("#shell-parent > .view").forEach((v) => v.classList.add("view--hidden"));
+      elTo.classList.remove("view--hidden");
+      runTabDataLoads();
+      return;
+    }
+
+    animateParentTabSwitch(fromTab, next, elFrom, elTo, mainEl).then(() => {
+      runTabDataLoads();
+    });
   }
 
   function openTeacherClassPicker() {
@@ -588,6 +746,52 @@
     if (next < 0 || next >= diaryDates.length) return;
     diaryDate = diaryDates[next];
     loadDiary();
+  }
+
+  /**
+   * Левая стрелка / свайп вправо: блок уезжает вправо, новый день слева.
+   * Правая / свайп влево: уезжает влево, новый справа.
+   */
+  function shiftDiaryAnimated(delta) {
+    if (!diaryDates.length || diaryDayAnimBusy) return;
+    const idx = diaryDates.indexOf(diaryDate);
+    if (idx < 0) {
+      shiftDiary(delta);
+      return;
+    }
+    const n = idx + delta;
+    if (n < 0 || n >= diaryDates.length) return;
+
+    const card = $("#diary-card");
+    if (prefersReducedMotion() || !card || typeof card.animate !== "function") {
+      diaryDate = diaryDates[n];
+      loadDiary();
+      return;
+    }
+
+    diaryDayAnimBusy = true;
+    const exitToRight = delta < 0;
+    const outK = exitToRight
+      ? [
+          { transform: "translate3d(0,0,0)", opacity: 1 },
+          { transform: "translate3d(36px,0,0)", opacity: 0 },
+        ]
+      : [
+          { transform: "translate3d(0,0,0)", opacity: 1 },
+          { transform: "translate3d(-36px,0,0)", opacity: 0 },
+        ];
+
+    cancelElAnimations(card);
+    const out = card.animate(outK, { duration: 240, easing: "ease-in", fill: "forwards" });
+    animPromise(out).then(() => {
+      out.cancel();
+      clearModalMotionInline(card);
+      diaryDate = diaryDates[n];
+      const enterEdge = exitToRight ? "left" : "right";
+      loadDiary(enterEdge).finally(() => {
+        diaryDayAnimBusy = false;
+      });
+    });
   }
 
   function barClassForKey(key) {
@@ -1133,6 +1337,48 @@
     loadTeacherDiary();
   }
 
+  function shiftTeacherDiaryAnimated(delta) {
+    if (!tDiaryDates.length || teacherDiaryDayAnimBusy) return;
+    const idx = tDiaryDates.indexOf(tDiaryDate);
+    if (idx < 0) {
+      shiftTeacherDiary(delta);
+      return;
+    }
+    const n = idx + delta;
+    if (n < 0 || n >= tDiaryDates.length) return;
+
+    const card = $("#t-diary-card");
+    if (prefersReducedMotion() || !card || typeof card.animate !== "function") {
+      tDiaryDate = tDiaryDates[n];
+      loadTeacherDiary();
+      return;
+    }
+
+    teacherDiaryDayAnimBusy = true;
+    const exitToRight = delta < 0;
+    const outK = exitToRight
+      ? [
+          { transform: "translate3d(0,0,0)", opacity: 1 },
+          { transform: "translate3d(36px,0,0)", opacity: 0 },
+        ]
+      : [
+          { transform: "translate3d(0,0,0)", opacity: 1 },
+          { transform: "translate3d(-36px,0,0)", opacity: 0 },
+        ];
+
+    cancelElAnimations(card);
+    const out = card.animate(outK, { duration: 240, easing: "ease-in", fill: "forwards" });
+    animPromise(out).then(() => {
+      out.cancel();
+      clearModalMotionInline(card);
+      tDiaryDate = tDiaryDates[n];
+      const enterEdge = exitToRight ? "left" : "right";
+      loadTeacherDiary(enterEdge).finally(() => {
+        teacherDiaryDayAnimBusy = false;
+      });
+    });
+  }
+
   function padIsoPart(n) {
     return String(n).padStart(2, "0");
   }
@@ -1476,12 +1722,13 @@
       });
   }
 
-  function loadTeacherDiary() {
+  function loadTeacherDiary(enterFrom) {
     const lessonsEl = $("#t-lessons");
-    if (!lessonsEl) return;
+    const card = $("#t-diary-card");
+    if (!lessonsEl) return Promise.resolve();
     lessonsEl.innerHTML = diaryLessonsSkeletonHtml();
     lessonsEl.setAttribute("aria-busy", "true");
-    api(
+    return api(
       `/api/teacher/classes/${encodeURIComponent(tClassId)}/diary?date=${encodeURIComponent(
         tDiaryDate
       )}`
@@ -1502,8 +1749,13 @@
         });
         updateTeacherDiaryNavState();
         loadChemTable();
+        if (enterFrom === "left" || enterFrom === "right") {
+          return runSlideEnter(card, enterFrom === "left");
+        }
+        return undefined;
       })
       .catch((err) => {
+        clearModalMotionInline(card);
         lessonsEl.removeAttribute("aria-busy");
         const msg = getApiErrorMessage(err);
         announceStatus(msg);
@@ -1575,11 +1827,12 @@
     );
   }
 
-  function loadDiary() {
+  function loadDiary(enterFrom) {
     const lessonsEl = $("#diary-lessons");
+    const card = $("#diary-card");
     lessonsEl.innerHTML = diaryLessonsSkeletonHtml();
     lessonsEl.setAttribute("aria-busy", "true");
-    api(
+    return api(
       `/api/children/${encodeURIComponent(childId)}/diary?date=${encodeURIComponent(
         diaryDate
       )}`
@@ -1594,8 +1847,13 @@
         lessonsEl.innerHTML = "";
         day.lessons.forEach((les) => lessonsEl.appendChild(renderLesson(les)));
         updateDiaryNavState();
+        if (enterFrom === "left" || enterFrom === "right") {
+          return runSlideEnter(card, enterFrom === "left");
+        }
+        return undefined;
       })
       .catch((err) => {
+        clearModalMotionInline(card);
         lessonsEl.removeAttribute("aria-busy");
         const msg = getApiErrorMessage(err);
         announceStatus(msg);
@@ -1794,13 +2052,13 @@
     loadPerformance();
   });
 
-  $("#diary-prev").addEventListener("click", () => shiftDiary(-1));
-  $("#diary-next").addEventListener("click", () => shiftDiary(1));
-  attachDiarySwipe($("#diary-card"), shiftDiary);
+  $("#diary-prev").addEventListener("click", () => shiftDiaryAnimated(-1));
+  $("#diary-next").addEventListener("click", () => shiftDiaryAnimated(1));
+  attachDiarySwipe($("#diary-card"), shiftDiaryAnimated);
 
-  $("#t-diary-prev").addEventListener("click", () => shiftTeacherDiary(-1));
-  $("#t-diary-next").addEventListener("click", () => shiftTeacherDiary(1));
-  attachDiarySwipe($("#t-diary-card"), shiftTeacherDiary);
+  $("#t-diary-prev").addEventListener("click", () => shiftTeacherDiaryAnimated(-1));
+  $("#t-diary-next").addEventListener("click", () => shiftTeacherDiaryAnimated(1));
+  attachDiarySwipe($("#t-diary-card"), shiftTeacherDiaryAnimated);
 
   const tCalOpen = $("#t-cal-open");
   if (tCalOpen) tCalOpen.addEventListener("click", openTeacherCalendar);

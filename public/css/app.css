@@ -825,6 +825,27 @@ body.auth-landing {
   padding: 12px 8px 8px;
 }
 
+/* Переключение вкладок родителя: две секции .view накладываются на время слайда */
+#shell-parent.main--view-swap {
+  min-height: 200px;
+}
+
+#shell-parent.main--view-swap > .view:not(.view--hidden) {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #shell-parent.main--view-swap > .view:not(.view--hidden) {
+    position: static;
+  }
+}
+
 .diary-wrap {
   display: flex;
   align-items: stretch;
