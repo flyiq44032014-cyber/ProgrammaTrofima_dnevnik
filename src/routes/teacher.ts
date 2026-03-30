@@ -21,12 +21,10 @@ function diaryChemLessonsOnly(day: DiaryDay): DiaryDay {
 
 export const teacherRouter = Router();
 
-function useDb(): boolean {
-  return Boolean(process.env.DATABASE_URL);
-}
+const DB_ENABLED = Boolean(process.env.DATABASE_URL);
 
 async function listClassesSafe() {
-  if (!useDb()) return mem.memListClasses();
+  if (!DB_ENABLED) return mem.memListClasses();
   try {
     return await listSchoolClasses();
   } catch (e) {
@@ -36,7 +34,7 @@ async function listClassesSafe() {
 }
 
 async function rosterSafe(classId: string) {
-  if (!useDb()) return mem.memGetRoster(classId);
+  if (!DB_ENABLED) return mem.memGetRoster(classId);
   try {
     return await getClassRoster(classId);
   } catch (e) {
@@ -46,7 +44,7 @@ async function rosterSafe(classId: string) {
 }
 
 async function diaryDaySafe(classId: string, isoDate: string) {
-  if (!useDb()) return mem.memGetClassDiary(classId, isoDate);
+  if (!DB_ENABLED) return mem.memGetClassDiary(classId, isoDate);
   try {
     return await getClassDiary(classId, isoDate);
   } catch (e) {
@@ -56,7 +54,7 @@ async function diaryDaySafe(classId: string, isoDate: string) {
 }
 
 async function diaryDatesSafe(classId: string) {
-  if (!useDb()) return mem.memGetClassDiaryDates(classId);
+  if (!DB_ENABLED) return mem.memGetClassDiaryDates(classId);
   try {
     return await getClassDiaryDates(classId);
   } catch (e) {
@@ -66,7 +64,7 @@ async function diaryDatesSafe(classId: string) {
 }
 
 teacherRouter.get("/profile", (_req, res) => {
-  res.json(useDb() ? TEACHER_PROFILE : mem.memTeacherProfile());
+  res.json(DB_ENABLED ? TEACHER_PROFILE : mem.memTeacherProfile());
 });
 
 teacherRouter.get("/classes", async (_req, res) => {
@@ -278,7 +276,7 @@ teacherRouter.put(
     const keyDecoded = decodeURIComponent(lessonKey);
     try {
       let ok = false;
-      if (useDb()) {
+      if (DB_ENABLED) {
         try {
           ok = await updateClassLesson(classId, isoDate, keyDecoded, patch);
         } catch (e) {

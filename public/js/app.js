@@ -1675,17 +1675,37 @@
     });
   }
 
-  function loadParentMeetings() {
-    const tbody = $("#meetings-tbody");
-    const empty = $("#meetings-empty");
-    const msg = $("#meetings-msg");
+  function renderMeetingRow(tbody, m) {
+    const tr = document.createElement("tr");
+    const tdDate = document.createElement("td");
+    const tdTime = document.createElement("td");
+    const tdTopic = document.createElement("td");
+    const dFmt = dateFromIsoCalendar(m.date);
+    const dateStr = dFmt.toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    tdDate.textContent = dateStr;
+    tdTime.textContent = m.time || "—";
+    tdTopic.textContent = m.topic || "";
+    tr.appendChild(tdDate);
+    tr.appendChild(tdTime);
+    tr.appendChild(tdTopic);
+    tbody.appendChild(tr);
+  }
+
+  function loadMeetingsTable(endpoint, tbodySel, emptySel, msgSel) {
+    const tbody = $(tbodySel);
+    const empty = $(emptySel);
+    const msg = $(msgSel);
     if (!tbody) return;
 
     if (msg) msg.hidden = false;
     if (empty) empty.hidden = true;
     tbody.innerHTML = "";
 
-    api(`/api/children/${encodeURIComponent(childId)}/meeting`)
+    return api(endpoint)
       .then((d) => {
         if (msg) msg.hidden = true;
         const m = d.meeting;
@@ -1693,24 +1713,8 @@
           if (empty) empty.hidden = false;
           return;
         }
-
-        const tr = document.createElement("tr");
-        const tdDate = document.createElement("td");
-        const tdTime = document.createElement("td");
-        const tdTopic = document.createElement("td");
-        const dFmt = dateFromIsoCalendar(m.date);
-        const dateStr = dFmt.toLocaleDateString("ru-RU", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
-        tdDate.textContent = dateStr;
-        tdTime.textContent = m.time || "—";
-        tdTopic.textContent = m.topic || "";
-        tr.appendChild(tdDate);
-        tr.appendChild(tdTime);
-        tr.appendChild(tdTopic);
-        tbody.appendChild(tr);
+        if (empty) empty.hidden = true;
+        renderMeetingRow(tbody, m);
       })
       .catch((err) => {
         const emsg = getApiErrorMessage(err);
@@ -1723,52 +1727,22 @@
       });
   }
 
+  function loadParentMeetings() {
+    return loadMeetingsTable(
+      `/api/children/${encodeURIComponent(childId)}/meeting`,
+      "#meetings-tbody",
+      "#meetings-empty",
+      "#meetings-msg"
+    );
+  }
+
   function loadTeacherMeetings() {
-    const tbody = $("#t-meetings-tbody");
-    const empty = $("#t-meetings-empty");
-    const msg = $("#t-meetings-msg");
-    if (!tbody) return;
-
-    if (msg) msg.hidden = false;
-    if (empty) empty.hidden = true;
-    tbody.innerHTML = "";
-
-    api(`/api/teacher/classes/${encodeURIComponent(tClassId)}/meeting`)
-      .then((d) => {
-        if (msg) msg.hidden = true;
-        const m = d.meeting;
-        if (!m) {
-          if (empty) empty.hidden = false;
-          return;
-        }
-
-        const tr = document.createElement("tr");
-        const tdDate = document.createElement("td");
-        const tdTime = document.createElement("td");
-        const tdTopic = document.createElement("td");
-        const dFmt = dateFromIsoCalendar(m.date);
-        const dateStr = dFmt.toLocaleDateString("ru-RU", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
-        tdDate.textContent = dateStr;
-        tdTime.textContent = m.time || "—";
-        tdTopic.textContent = m.topic || "";
-        tr.appendChild(tdDate);
-        tr.appendChild(tdTime);
-        tr.appendChild(tdTopic);
-        tbody.appendChild(tr);
-      })
-      .catch((err) => {
-        const emsg = getApiErrorMessage(err);
-        announceStatus(emsg);
-        if (msg) {
-          msg.textContent = emsg;
-          msg.hidden = false;
-        }
-        if (empty) empty.hidden = false;
-      });
+    return loadMeetingsTable(
+      `/api/teacher/classes/${encodeURIComponent(tClassId)}/meeting`,
+      "#t-meetings-tbody",
+      "#t-meetings-empty",
+      "#t-meetings-msg"
+    );
   }
 
   function loadTeacherDiaryMeta() {

@@ -2,9 +2,7 @@ import { memUserDisplayById } from "../auth/memDisplay";
 import * as repo from "../db/profileRepository";
 import type { ParentChildRow, TeacherClassRow } from "../db/profileRepository";
 
-function useDb(): boolean {
-  return Boolean(process.env.DATABASE_URL);
-}
+const DB_ENABLED = Boolean(process.env.DATABASE_URL);
 
 type MemChild = ParentChildRow;
 type MemClass = TeacherClassRow;
@@ -29,7 +27,7 @@ export async function getProfile(
   role: "parent" | "teacher",
   sessionEmail: string
 ): Promise<ProfilePayload | null> {
-  if (useDb()) {
+  if (DB_ENABLED) {
     const u = await repo.dbGetUserNames(userId);
     if (!u) return null;
     const base = {
@@ -66,7 +64,7 @@ export async function addParentChild(
   userId: number,
   body: { lastName: string; firstName: string; patronymic: string; classLabel: string }
 ): Promise<ParentChildRow> {
-  if (useDb()) {
+  if (DB_ENABLED) {
     return repo.dbAddParentChild(userId, body);
   }
   const row: MemChild = {
@@ -86,7 +84,7 @@ export async function addTeacherClass(
   userId: number,
   body: { label: string; grade: number | null }
 ): Promise<TeacherClassRow> {
-  if (useDb()) {
+  if (DB_ENABLED) {
     return repo.dbAddTeacherProfileClass(userId, body);
   }
   const row: MemClass = {

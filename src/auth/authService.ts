@@ -13,13 +13,11 @@ import {
   seedMemoryUsers,
 } from "./memDisplay";
 
-function useDb(): boolean {
-  return Boolean(process.env.DATABASE_URL);
-}
+const DB_ENABLED = Boolean(process.env.DATABASE_URL);
 
 export async function authFindByEmail(email: string): Promise<AuthUserRow | null> {
   const norm = email.trim().toLowerCase();
-  if (useDb()) return dbFindUserByEmail(norm);
+  if (DB_ENABLED) return dbFindUserByEmail(norm);
   seedMemoryUsers();
   const m = getMemUserByEmail(norm);
   return m ? memUserToAuthRow(m) : null;
@@ -54,7 +52,7 @@ export async function authCreateUser(
   }
   validateProfile(profile);
   const hash = await bcrypt.hash(passwordPlain, 10);
-  if (useDb()) {
+  if (DB_ENABLED) {
     const existing = await dbFindUserByEmail(norm);
     if (existing) throw new Error("EMAIL_TAKEN");
     return dbCreateUser(norm, hash, role, profile);
