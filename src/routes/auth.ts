@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as fs from "fs";
+import * as path from "path";
 import type { RegisterProfile } from "../db/authRepository";
 import {
   authCreateUser,
@@ -8,7 +9,7 @@ import {
 } from "../auth/authService";
 
 export const authRouter = Router();
-const DEBUG_LOG_PATH = "debug-00b601.log";
+const DEBUG_LOG_PATH = path.join(process.cwd(), "debug-00b601.log");
 
 function setSession(
   req: import("express").Request,
@@ -98,6 +99,31 @@ authRouter.post("/login", async (req, res) => {
       user: { id: row.id, email: row.email, role: row.role },
     });
   } catch (e) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    const errName = e instanceof Error ? e.name : "unknown";
+    // #region agent log
+    try {
+      fs.appendFileSync(
+        DEBUG_LOG_PATH,
+        JSON.stringify({
+          sessionId: "00b601",
+          runId: "auth-login",
+          hypothesisId: "H500",
+          location: "auth.ts:/login:catch",
+          message: "login threw before success response",
+          data: {
+            errName,
+            errMsg,
+            hasDbUrl: Boolean(process.env.DATABASE_URL?.trim()),
+          },
+          timestamp: Date.now(),
+        }) + "\n"
+      );
+    } catch {
+      /* ignore */
+    }
+    // #endregion
+    console.error("[DEBUG-00b601]", JSON.stringify({ errName, errMsg, hasDbUrl: Boolean(process.env.DATABASE_URL?.trim()) }));
     console.error(e);
     res.status(500).json({ error: "Ошибка сервера" });
   }
