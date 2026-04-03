@@ -5,6 +5,8 @@ export interface UserNamesRow {
   last_name: string | null;
   first_name: string | null;
   patronymic: string | null;
+  phone: string | null;
+  avatar_url: string | null;
 }
 
 export interface ParentChildRow {
@@ -13,6 +15,8 @@ export interface ParentChildRow {
   firstName: string;
   patronymic: string;
   classLabel: string;
+  /** id в таблице students; null — дневник/оценки недоступны, пока директор не привяжет ученика */
+  linkedStudentId: string | null;
 }
 
 export interface TeacherClassRow {
@@ -23,10 +27,31 @@ export interface TeacherClassRow {
 
 export async function dbGetUserNames(userId: number): Promise<UserNamesRow | null> {
   const { rows } = await getPool().query<UserNamesRow>(
-    `SELECT email, last_name, first_name, patronymic FROM users WHERE id = $1`,
+    `SELECT email, last_name, first_name, patronymic, phone, avatar_url FROM users WHERE id = $1`,
     [userId]
   );
   return rows[0] ?? null;
+}
+
+export async function dbGetParentAccount(
+  userId: number
+): Promise<{ email: string; role: string } | null> {
+  const { rows } = await getPool().query<{ email: string; role: string }>(
+    `SELECT email, role FROM users WHERE id = $1`,
+    [userId]
+  );
+  const r = rows[0];
+  return r ?? null;
+}
+
+export async function dbUpdateParentPhone(userId: number, phone: string): Promise<void> {
+  const { rowCount } = await getPool().query(
+    `UPDATE users SET phone = $2 WHERE id = $1 AND role = 'parent'`,
+    [userId, phone]
+  );
+  if ((rowCount ?? 0) < 1) {
+    throw new Error("PARENT_PHONE_UPDATE_FAILED");
+  }
 }
 
 export async function dbListParentChildren(userId: number): Promise<ParentChildRow[]> {
@@ -36,8 +61,9 @@ export async function dbListParentChildren(userId: number): Promise<ParentChildR
     first_name: string;
     patronymic: string;
     class_label: string;
+    student_id: string | null;
   }>(
-    `SELECT id, last_name, first_name, patronymic, class_label
+    `SELECT id, last_name, first_name, patronymic, class_label, student_id
      FROM user_parent_children WHERE user_id = $1 ORDER BY sort_order, id`,
     [userId]
   );
@@ -47,6 +73,7 @@ export async function dbListParentChildren(userId: number): Promise<ParentChildR
     firstName: r.first_name,
     patronymic: r.patronymic || "",
     classLabel: r.class_label,
+    linkedStudentId: r.student_id,
   }));
 }
 
@@ -64,8 +91,8 @@ export async function dbAddParentChild(
     `WITH nx AS (
        SELECT COALESCE(MAX(sort_order), -1) + 1 AS n FROM user_parent_children WHERE user_id = $1
      )
-     INSERT INTO user_parent_children (user_id, last_name, first_name, patronymic, class_label, sort_order)
-     SELECT $1, $2, $3, $4, $5, nx.n FROM nx
+     INSERT INTO user_parent_children (user_id, last_name, first_name, patronymic, class_label, sort_order, student_id)
+     SELECT $1, $2, $3, $4, $5, nx.n, NULL FROM nx
      RETURNING id, last_name, first_name, patronymic, class_label`,
     [
       userId,
@@ -83,6 +110,7 @@ export async function dbAddParentChild(
     firstName: r.first_name,
     patronymic: r.patronymic || "",
     classLabel: r.class_label,
+    linkedStudentId: null,
   };
 }
 

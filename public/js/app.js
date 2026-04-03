@@ -4,11 +4,14 @@
   /** @type {{ id: string, name: string, classLabel: string }[]} */
   let children = [];
   /** @type {string} */
-  let childId = "nika";
+  let childId = "";
   /** @type {string} ISO date */
   let diaryDate = "2026-03-27";
   /** @type {string[]} */
   let diaryDates = [];
+  let pCalViewYear = 2026;
+  /** month 0..11 */
+  let pCalViewMonth = 2;
 
   let tab = "diary";
   let diaryDayAnimBusy = false;
@@ -23,8 +26,41 @@
 
   /** @type {'login' | 'register'} */
   let authMode = "login";
-  /** @type {'parent' | 'teacher'} */
+  /** @type {'parent' | 'teacher' | 'director'} */
   let appRole = "parent";
+  /** @type {'classes' | 'parents' | 'teachers' | 'schedule'} */
+  let dTab = "classes";
+
+  function parentHasChild() {
+    return Boolean(String(childId || "").trim());
+  }
+
+  /** После изменений в профиле родителя — перезагрузить детей и текущую вкладку (без запросов с пустым childId). */
+  function syncParentShellAfterChildrenChange() {
+    if (appRole !== "parent") return Promise.resolve();
+    return loadChildren()
+      .then(() => {
+        if (!parentHasChild()) {
+          diaryDates = [];
+          updateDiaryNavState();
+          const lessonsEl = $("#diary-lessons");
+          if (lessonsEl) {
+            lessonsEl.removeAttribute("aria-busy");
+            lessonsEl.innerHTML =
+              '<p class="placeholder-msg" style="text-align:center;color:#888;font-size:0.88rem">Нет ученика для дневника. Привяжите ребёнка в профиле или обратитесь к директору.</p>';
+          }
+          return;
+        }
+        if (tab === "diary") {
+          return loadDiaryMeta().then(() => loadDiary());
+        }
+        runTabDataLoads();
+        return undefined;
+      })
+      .catch((err) => {
+        announceStatus(getApiErrorMessage(err));
+      });
+  }
   /** @type {string} */
   let tClassId = "c8a";
   /** @type {string} ISO */
@@ -34,14 +70,18 @@
   let tCalViewYear = 2026;
   /** month index 0..11 for teacher date-picker */
   let tCalViewMonth = 2;
-  /** @type {{ name: string, subject: string } | null} */
+  /** @type {{ name: string, subject: string, subjects?: string[] } | null} */
   let teacherProfile = null;
   /** @type {{ id: string, label: string, grade: number }[]} */
   let teacherClasses = [];
   /** @type {Record<string, unknown> | null} */
   let editingLesson = null;
 
-  const CHEM_SUBJ = "Химия";
+  /** @type {ReturnType<typeof setTimeout> | 0} */
+  let statusToastTimer = 0;
+
+  /** Предмет, для которого в демо есть таблица оценок за день (сервер также проверяет). */
+  const PRIMARY_GRADES_SUBJECT = "Математика";
   /** @type {'diary' | 'pupil' | 'tmeet' | 'quarters'} */
   let tTab = "diary";
   /** @type {string | null} */
@@ -50,6 +90,10 @@
   let tSelectedPupilKey = null;
 
   const $ = (sel, root = document) => root.querySelector(sel);
+
+  function teacherActiveSubject() {
+    return (teacherProfile && teacherProfile.subject) || PRIMARY_GRADES_SUBJECT;
+  }
 
   /**
    * Календарная дата YYYY-MM-DD без времени в API: интерпретируем как полдень *локального* часового пояса,
@@ -109,6 +153,17 @@
     );
   }
 
+  function apiPatch(path, body) {
+    return fetch(path, {
+      ...fetchCred,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) =>
+      readResponseBody(r).then((parsed) => handleFetched(r, parsed))
+    );
+  }
+
   function apiPost(path, body) {
     return fetch(path, {
       ...fetchCred,
@@ -120,9 +175,27 @@
     );
   }
 
+  function apiDelete(path, body) {
+    const payload = body == null ? undefined : JSON.stringify(body);
+    return fetch(path, {
+      ...fetchCred,
+      method: "DELETE",
+      headers: payload ? { "Content-Type": "application/json" } : undefined,
+      body: payload,
+    }).then((r) =>
+      readResponseBody(r).then((parsed) => handleFetched(r, parsed))
+    );
+  }
+
   function getApiErrorMessage(err) {
     if (err == null) return "Неизвестная ошибка";
-    if (typeof err === "string") return err;
+    if (typeof err === "string") {
+      if (/failed to fetch|networkerror|load failed/i.test(err)) return "Нет соединения с сервером";
+      return err;
+    }
+    const rawMsg = typeof err.message === "string" ? err.message : "";
+    if (/failed to fetch|networkerror|load failed|network request failed/i.test(rawMsg))
+      return "Нет соединения с сервером";
     if (typeof err.message === "string" && err.message) return err.message;
     if (err.name === "TypeError" && /fetch|network|Network/i.test(String(err.message)))
       return "Нет соединения с сервером";
@@ -131,11 +204,33 @@
 
   function announceStatus(text) {
     const el = $("#app-announcer");
-    if (!el) return;
-    el.textContent = "";
-    requestAnimationFrame(() => {
-      el.textContent = text;
-    });
+    if (el) {
+      el.textContent = "";
+      if (text) {
+        requestAnimationFrame(() => {
+          el.textContent = text;
+        });
+      }
+    }
+    const toast = $("#app-status-toast");
+    if (!toast) return;
+    if (statusToastTimer) {
+      clearTimeout(statusToastTimer);
+      statusToastTimer = 0;
+    }
+    const t = text != null ? String(text).trim() : "";
+    if (!t) {
+      toast.hidden = true;
+      toast.textContent = "";
+      return;
+    }
+    toast.textContent = t;
+    toast.hidden = false;
+    statusToastTimer = setTimeout(() => {
+      toast.hidden = true;
+      toast.textContent = "";
+      statusToastTimer = 0;
+    }, 4500);
   }
 
   const MODAL_MOTION_CLASS = "modal-motion";
@@ -603,7 +698,7 @@
           '<div class="p-name"></div><div class="p-class"></div>';
         btn.querySelector(".p-name").textContent = `Класс ${c.label}`;
         btn.querySelector(".p-class").textContent =
-          (teacherProfile && teacherProfile.subject) || "Химия";
+          (teacherProfile && teacherProfile.subject) || PRIMARY_GRADES_SUBJECT;
         btn.addEventListener("click", () => {
           tClassId = c.id;
           tSelectedPupilKey = null;
@@ -650,6 +745,7 @@
   }
 
   function openPicker() {
+    if (appRole === "director") return;
     if (appRole === "teacher") {
       openTeacherClassPicker();
       return;
@@ -688,18 +784,39 @@
   }
 
   function loadChildren() {
-    return api("/api/children").then((data) => {
-      children = data.children || [];
-      const cur = children.find((c) => c.id === childId) || children[0];
-      if (cur) {
-        childId = cur.id;
-        $("#hdr-name").textContent = cur.name;
-        $("#hdr-class").textContent = cur.classLabel;
-      }
-    });
+    return api("/api/children")
+      .then((data) => {
+        children = data.children || [];
+        const cur = children.find((c) => c.id === childId) || children[0];
+        if (cur) {
+          childId = cur.id;
+          $("#hdr-name").textContent = cur.name;
+          $("#hdr-class").textContent = cur.classLabel;
+        } else {
+          childId = "";
+          const hn = $("#hdr-name");
+          const hc = $("#hdr-class");
+          if (hn) hn.textContent = "Нет привязанных детей";
+          if (hc) hc.textContent = "Добавьте ребёнка в профиле или через директора";
+        }
+      })
+      .catch((err) => {
+        children = [];
+        childId = "";
+        const hn = $("#hdr-name");
+        const hc = $("#hdr-class");
+        if (hn) hn.textContent = "Нет привязанных детей";
+        if (hc) hc.textContent = "Не удалось загрузить список детей";
+        announceStatus(getApiErrorMessage(err));
+      });
   }
 
   function loadDiaryMeta() {
+    if (!parentHasChild()) {
+      diaryDates = [];
+      updateDiaryNavState();
+      return Promise.resolve();
+    }
     return api(`/api/children/${encodeURIComponent(childId)}/diary/meta`)
       .then((d) => {
         diaryDates = d.dates || [];
@@ -808,7 +925,7 @@
 
   function renderLesson(lesson, opts) {
     const teacherEdit = opts && opts.teacherEdit;
-    const onlyChemistry = opts && opts.onlyChemistry;
+    const onlyActiveSubject = opts && opts.onlyActiveSubject;
     const hasBlocks = Array.isArray(lesson.blocks) && lesson.blocks.length > 0;
     const detailsFromFields =
       !hasBlocks &&
@@ -901,7 +1018,7 @@
 
     wrap.appendChild(top);
     if (hasBlocks || detailsFromFields) wrap.appendChild(body);
-    if (teacherEdit && (!onlyChemistry || lesson.title === CHEM_SUBJ)) {
+    if (teacherEdit && (!onlyActiveSubject || lesson.title === teacherActiveSubject())) {
       const edit = document.createElement("button");
       edit.type = "button";
       edit.className = "lesson__edit";
@@ -985,8 +1102,13 @@
           // чтобы они не светились в HTML исходнике на публичном деплое.
           loginHints.innerHTML =
             "<strong>Демо-аккаунты (для проверки):</strong><br />" +
-            "Родитель — <code>Roditel@yandex.ru</code>, пароль <code>1234</code><br />" +
-            "Учитель — <code>Uchitel@yandex.ru</code>, пароль <code>0987</code>";
+            "Директор — <code>director.demo@school.local</code>, пароль <code>DirectorDemo2026</code><br />" +
+            "Учитель (Соколова Виктория Павловна, Литература) — <code>teacher.rus@school.local</code>, пароль <code>TeacherDemo2026</code><br />" +
+            "Учитель (Лебедева Алёна Михайловна, История) — <code>teacher.math@school.local</code>, пароль <code>TeacherDemo2026</code><br />" +
+            "Учитель (Мельникова Снежана Оскаровна, Химия) — <code>teacher.pool.45@school.local</code>, пароль <code>TeacherDemo2026</code><br />" +
+            "Родитель (семья Кагосима) — <code>kagosima.parent@school.local</code>, пароль <code>FamilyParent2026</code><br />" +
+            "Родитель (семья Мацумото) — <code>matsumoto.parent@school.local</code>, пароль <code>FamilyParent2026</code><br />" +
+            "Родитель (семья Танака) — <code>tanaka.parent@school.local</code>, пароль <code>FamilyParent2026</code>";
         }
       }
       reqRegIds.forEach((id) => {
@@ -1051,6 +1173,9 @@
     removeFocusTrap();
     const m = $("#profile-modal");
     if (m) m.hidden = true;
+    if (appRole === "parent") {
+      void syncParentShellAfterChildrenChange();
+    }
   }
 
   function renderProfileData(data) {
@@ -1074,6 +1199,18 @@
     if (secP) secP.hidden = data.role !== "parent";
     if (secT) secT.hidden = data.role !== "teacher";
 
+    const phoneEl = $("#prof-phone");
+    const phoneIncomplete = $("#prof-phone-incomplete");
+    if (data.role === "parent") {
+      if (phoneEl) phoneEl.value = String(data.phone || "").trim();
+      if (phoneIncomplete) {
+        phoneIncomplete.hidden = Boolean(String(data.phone || "").trim());
+      }
+    } else {
+      if (phoneEl) phoneEl.value = "";
+      if (phoneIncomplete) phoneIncomplete.hidden = true;
+    }
+
     const chList = $("#profile-children-list");
     if (chList && data.role === "parent") {
       chList.innerHTML = "";
@@ -1088,6 +1225,16 @@
         sub.className = "profile-list__sub";
         sub.textContent = c.classLabel || "";
         li.appendChild(sub);
+        if (c.linkedStudentId == null || c.linkedStudentId === "") {
+          const warn = document.createElement("span");
+          warn.className = "profile-list__sub";
+          warn.style.color = "#b45309";
+          warn.style.display = "block";
+          warn.style.fontSize = "0.78rem";
+          warn.textContent =
+            "Нет привязки к ученику в школе (дневник недоступен). Обратитесь к директору.";
+          li.appendChild(warn);
+        }
         chList.appendChild(li);
       });
     }
@@ -1119,6 +1266,18 @@
           m.hidden = false;
           beginModalMotion(m);
           installFocusTrap(m, closeProfileModal);
+          if (data.role === "parent") {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                const ph = $("#prof-phone");
+                if (ph && m.contains(ph)) {
+                  try {
+                    ph.focus();
+                  } catch (_) {}
+                }
+              });
+            });
+          }
         }
       })
       .catch((err) => {
@@ -1170,6 +1329,27 @@
         if (patEl) patEl.value = "";
         if (gradeEl) gradeEl.value = "";
         if (letterEl) letterEl.value = "";
+        void syncParentShellAfterChildrenChange();
+      })
+      .catch((err) => setProfileError(getApiErrorMessage(err)));
+  }
+
+  function submitProfileRedeemLinkKey() {
+    setProfileError("");
+    const keyEl = $("#prof-link-key");
+    const linkKey = keyEl ? String(keyEl.value || "").trim().toUpperCase() : "";
+    if (!linkKey) {
+      setProfileError("Введите ключ привязки.");
+      return;
+    }
+    apiPost("/api/parent/link-keys/redeem", { linkKey })
+      .then((body) => {
+        if (keyEl) keyEl.value = "";
+        announceStatus(body && body.linkedNow ? "Ребенок привязан по ключу" : "Ребенок уже был привязан к аккаунту");
+        return api("/api/profile").then((data) => {
+          renderProfileData(data);
+          void syncParentShellAfterChildrenChange();
+        });
       })
       .catch((err) => setProfileError(getApiErrorMessage(err)));
   }
@@ -1237,6 +1417,7 @@
 
   function showLanding() {
     hideAllAppModals();
+    teacherProfile = null;
     const landing = $("#shell-landing");
     const app = $("#shell-app");
     if (landing) {
@@ -1271,30 +1452,70 @@
   }
 
   function applyRole(role) {
-    appRole = role === "teacher" ? "teacher" : "parent";
+    appRole = role === "teacher" || role === "director" ? role : "parent";
 
     const shellP = $("#shell-parent");
     const shellT = $("#shell-teacher");
+    const shellD = $("#shell-director");
     const nav = document.querySelector(".bottomnav:not(.bottomnav--teacher)");
     const tnav = $("#teacher-bottomnav");
+    const dnav = $("#director-bottomnav");
     const op = $("#open-picker");
 
+    document.body.classList.remove("mode-teacher");
+    document.body.classList.remove("mode-director");
+
     if (appRole === "teacher") {
+      const tw = $("#teacher-subject-wrap");
+      if (tw) tw.hidden = true;
       document.body.classList.add("mode-teacher");
       shellP.classList.add("view--hidden");
       shellT.classList.remove("view--hidden");
       shellT.removeAttribute("hidden");
+      if (shellD) {
+        shellD.classList.add("view--hidden");
+        shellD.setAttribute("hidden", "");
+      }
       if (nav) nav.hidden = true;
       if (tnav) tnav.hidden = false;
+      if (dnav) dnav.hidden = true;
       if (op) op.hidden = false;
       document.body.style.paddingBottom = "calc(72px + env(safe-area-inset-bottom, 0))";
+    } else if (appRole === "director") {
+      teacherProfile = null;
+      const twd = $("#teacher-subject-wrap");
+      if (twd) twd.hidden = true;
+      document.body.classList.add("mode-director");
+      shellP.classList.add("view--hidden");
+      shellT.classList.add("view--hidden");
+      shellT.setAttribute("hidden", "");
+      if (shellD) {
+        shellD.classList.remove("view--hidden");
+        shellD.removeAttribute("hidden");
+      }
+      if (nav) nav.hidden = true;
+      if (tnav) tnav.hidden = true;
+      if (dnav) dnav.hidden = false;
+      if (op) op.hidden = true;
+      document.body.style.paddingBottom = "calc(72px + env(safe-area-inset-bottom, 0))";
+      $("#hdr-name").textContent = "Кабинет директора";
+      $("#hdr-class").textContent = "Администрирование";
     } else {
+      teacherProfile = null;
+      const twp = $("#teacher-subject-wrap");
+      if (twp) twp.hidden = true;
       document.body.classList.remove("mode-teacher");
+      document.body.classList.remove("mode-director");
       shellP.classList.remove("view--hidden");
       shellT.classList.add("view--hidden");
       shellT.setAttribute("hidden", "");
+      if (shellD) {
+        shellD.classList.add("view--hidden");
+        shellD.setAttribute("hidden", "");
+      }
       if (nav) nav.hidden = false;
       if (tnav) tnav.hidden = true;
+      if (dnav) dnav.hidden = true;
       if (op) op.hidden = false;
       document.body.style.paddingBottom = "";
       const cur = children.find((c) => c.id === childId) || children[0];
@@ -1306,17 +1527,1561 @@
   }
 
   function bootstrapAfterLogin(role) {
-    applyRole(role === "teacher" ? "teacher" : "parent");
+    applyRole(role === "teacher" || role === "director" ? role : "parent");
     if (role === "teacher") {
       initTeacherShell();
+    } else if (role === "director") {
+      initDirectorShell();
     } else {
-      loadChildren()
-        .then(() => loadDiaryMeta())
-        .then(() => {
-          loadDiary();
-          setTab("diary");
-        });
+      loadChildren().then(() => {
+        setTab("diary");
+        if (!parentHasChild()) return;
+        return loadDiaryMeta().then(() => loadDiary());
+      });
     }
+  }
+
+  function initDirectorShell() {
+    const dayMap = ["Пн", "Вт", "Ср", "Чт", "Пт"];
+    let selectedClassId = "";
+    let selectedClassNum = "";
+    let selectedClassParallel = "";
+    let selectedClassStudents = [];
+    let allClasses = [];
+    let parentsOffset = 0;
+    let parentsLimit = 15;
+    let parentsTotal = 0;
+    let parentsHasMore = true;
+    let parentsLoading = false;
+    let parentsRequestToken = 0;
+    let parentSearchDebounceTimer = 0;
+    let dSortDir = "asc";
+    let parentsSortDir = "asc";
+    let classStudentsSortDir = "asc";
+    let classStudentsSearchDebounce = 0;
+    let scheduleClassSearchDebounce = 0;
+    let auditPollTimer = 0;
+    let teachersOffset = 0;
+    let teachersLimit = 15;
+    let teachersTotal = 0;
+    let teachersHasMore = true;
+    let teachersLoading = false;
+    let teachersRequestToken = 0;
+    let teachersSortDir = "asc";
+    let teachersSearchDebounceTimer = 0;
+    const SCHEDULE_FIXED_QUARTER = 4;
+    const dViews = {
+      classes: "#d-view-classes",
+      parents: "#d-view-parents",
+      teachers: "#d-view-teachers",
+      schedule: "#d-view-schedule",
+    };
+    const classMeta = (c) => {
+      const label = String(c.label || c.id || "").trim();
+      const m = label.match(/^(\d+)\s*([A-Za-zА-Яа-яЁё]+)$/);
+      const classNum = m ? Number(m[1]) : Number(c.grade || 0);
+      const parallel = m ? m[2].toUpperCase() : label.replace(/\d+/g, "").trim().toUpperCase() || "";
+      return { classNum, parallel, label };
+    };
+    const normalizeClassKey = (s) => String(s || "").trim().toUpperCase().replace(/\s+/g, "");
+    const normalizeQuick = (s) => String(s || "").toLowerCase().replace(/\s+/g, "");
+    const parseBulkStudentsInput = (text) => {
+      const lines = String(text || "").split(/\r?\n/);
+      const valid = [];
+      const errors = [];
+      lines.forEach((raw, idx) => {
+        const cleaned = String(raw || "").trim().replace(/\s+/g, " ");
+        if (!cleaned) return;
+        const parts = cleaned.split(" ").filter(Boolean);
+        if (parts.length < 3) {
+          errors.push({ line: idx + 1, reason: "Нужно минимум 3 слова", raw: cleaned });
+          return;
+        }
+        const [lastName, firstName, ...rest] = parts;
+        valid.push({
+          line: idx + 1,
+          lastName,
+          firstName,
+          patronymic: rest.join(" "),
+          fullName: cleaned,
+        });
+      });
+      return { valid, errors };
+    };
+    const renderBulkPreview = (parsed) => {
+      const wrap = $("#d-bulk-students-preview");
+      if (!wrap) return;
+      const lines = [];
+      lines.push(`<div class="ok">Валидных строк: ${parsed.valid.length}</div>`);
+      if (parsed.errors.length) {
+        lines.push(`<div class="err">Ошибок: ${parsed.errors.length}</div>`);
+        parsed.errors.slice(0, 20).forEach((e) => {
+          lines.push(`<div class="err">Строка ${e.line}: ${e.reason} (${e.raw})</div>`);
+        });
+      } else {
+        lines.push(`<div class="ok">Ошибок не найдено</div>`);
+      }
+      wrap.innerHTML = lines.join("");
+    };
+    const syncParentsSortDirBtn = () => {
+      const btn = $("#d-parent-sort-dir");
+      if (!btn) return;
+      const isAsc = parentsSortDir === "asc";
+      btn.textContent = isAsc ? "↑" : "↓";
+      btn.setAttribute("aria-label", isAsc ? "По возрастанию" : "По убыванию");
+      btn.title = isAsc ? "По возрастанию" : "По убыванию";
+    };
+    const syncTeachersSortDirBtn = () => {
+      const btn = $("#d-teachers-sort-dir");
+      if (!btn) return;
+      const isAsc = teachersSortDir === "asc";
+      btn.textContent = isAsc ? "↑" : "↓";
+      btn.setAttribute("aria-label", isAsc ? "По возрастанию" : "По убыванию");
+      btn.title = isAsc ? "По возрастанию" : "По убыванию";
+    };
+    const syncClassStudentsSortDirBtn = () => {
+      const btn = $("#d-class-students-sort-dir");
+      if (!btn) return;
+      const isAsc = classStudentsSortDir === "asc";
+      btn.textContent = isAsc ? "↑" : "↓";
+      btn.setAttribute("aria-label", isAsc ? "По возрастанию по фамилии" : "По убыванию по фамилии");
+      btn.title = isAsc ? "По возрастанию" : "По убыванию";
+    };
+    const studentSurname = (s) => {
+      const n = String(s && s.name ? s.name : "").trim();
+      const p = n.split(/\s+/).filter(Boolean);
+      return p[0] || "";
+    };
+    const getClassStudentsDisplayList = () => {
+      let list = Array.isArray(selectedClassStudents) ? selectedClassStudents.slice() : [];
+      const q = normalizeQuick($("#d-class-students-search")?.value || "");
+      if (q) {
+        list = list.filter((s) => {
+          const full = normalizeQuick(s.name || "");
+          const sur = normalizeQuick(studentSurname(s));
+          const keyQ = normalizeQuick(s.parentLinkCode || "");
+          return full.includes(q) || sur.includes(q) || keyQ.includes(q);
+        });
+      }
+      const dir = classStudentsSortDir === "desc" ? -1 : 1;
+      list.sort((a, b) => dir * studentSurname(a).localeCompare(studentSurname(b), "ru"));
+      return list;
+    };
+    const renderSelectedClassStudents = () => {
+      const stTb = $("#d-class-students-tbody");
+      if (!stTb || !selectedClassId) return;
+      const list = getClassStudentsDisplayList();
+      stTb.innerHTML = "";
+      list.forEach((s, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td></td><td></td><td></td>";
+        tr.children[0].textContent = String(i + 1);
+        tr.children[1].textContent = s.name || "—";
+        tr.children[2].textContent = s.parentLinkCode || "—";
+        stTb.appendChild(tr);
+      });
+    };
+    const loadStudentsForClass = (classId, classNum, parallel) => {
+      const stTitle = $("#d-class-students-title");
+      const toolbar = $("#d-class-students-toolbar");
+      const searchEl = $("#d-class-students-search");
+      if (searchEl) searchEl.value = "";
+      classStudentsSortDir = "asc";
+      syncClassStudentsSortDirBtn();
+      return api(`/api/director/classes/${encodeURIComponent(classId)}/students`)
+        .then((ds) => {
+          const students = (ds && ds.students) || [];
+          selectedClassStudents = students;
+          if (toolbar) toolbar.removeAttribute("hidden");
+          if (stTitle) stTitle.textContent = `Ученики класса ${classNum}${parallel}`;
+          renderSelectedClassStudents();
+          const studentsWrap = $("#d-class-students-scroll");
+          if (studentsWrap && typeof studentsWrap.scrollIntoView === "function") {
+            studentsWrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
+        })
+        .catch((e) => {
+          if (toolbar) toolbar.setAttribute("hidden", "");
+          announceStatus(getApiErrorMessage(e));
+        });
+    };
+    const renderClassRows = () => {
+      const tb = $("#d-classes-tbody");
+      if (!tb) return;
+      const search = normalizeQuick($("#d-class-search")?.value || "");
+      const gradeFilter = String($("#d-class-grade-filter")?.value || "").trim();
+      const sortBy = String($("#d-class-sort-by")?.value || "grade");
+      const rows = allClasses
+        .map((c) => ({ ...c, ...classMeta(c) }))
+        .filter((c) => {
+          if (gradeFilter && String(c.classNum) !== gradeFilter) return false;
+          if (!search) return true;
+          return normalizeQuick(`${c.classNum}${c.parallel}`).includes(search);
+        })
+        .sort((a, b) => {
+          const dir = dSortDir === "desc" ? -1 : 1;
+          if (sortBy === "students") return dir * ((Number(a.studentsCount) || 0) - (Number(b.studentsCount) || 0));
+          if (sortBy === "parallel") {
+            if (a.parallel !== b.parallel) return dir * a.parallel.localeCompare(b.parallel, "ru");
+            return dir * (a.classNum - b.classNum);
+          }
+          if (a.classNum !== b.classNum) return dir * (a.classNum - b.classNum);
+          return dir * a.parallel.localeCompare(b.parallel, "ru");
+        });
+      tb.innerHTML = "";
+      rows.forEach((c) => {
+        const tr = document.createElement("tr");
+        const c1 = tr.insertCell();
+        const c2 = tr.insertCell();
+        const c3 = tr.insertCell();
+        const c4 = tr.insertCell();
+        c1.textContent = String(c.classNum || "—");
+        c2.textContent = c.parallel || "—";
+        c3.textContent = c.studentsCount != null ? String(c.studentsCount) : "0";
+        c4.textContent = c.classTeacherFullName || "—";
+        if (selectedClassId && selectedClassId === (c.id || c.label || "")) tr.classList.add("is-active");
+        tr.addEventListener("click", () => {
+          tb.querySelectorAll("tr").forEach((row) => row.classList.remove("is-active"));
+          tr.classList.add("is-active");
+          selectedClassId = c.id || c.label || "";
+          selectedClassNum = String(c.classNum || "");
+          selectedClassParallel = c.parallel || "";
+          loadStudentsForClass(selectedClassId, selectedClassNum, selectedClassParallel);
+        });
+        tb.appendChild(tr);
+      });
+    };
+    const syncScheduleClassSelect = (opts = {}) => {
+      const sel = $("#d-schedule-class");
+      if (!sel) return;
+      const preserve = opts.preserve === true;
+      const prev = preserve ? String(sel.value || "") : "";
+      const search = normalizeQuick($("#d-schedule-class-search")?.value || "");
+      const gradeFilter = String($("#d-schedule-grade-filter")?.value || "").trim();
+      const list = allClasses
+        .map((c) => ({ ...c, ...classMeta(c) }))
+        .filter((c) => {
+          if (gradeFilter && String(c.classNum) !== gradeFilter) return false;
+          if (!search) return true;
+          return normalizeQuick(`${c.classNum}${c.parallel} ${c.label || ""} ${c.id || ""}`).includes(search);
+        })
+        .sort((a, b) => {
+          if (a.classNum !== b.classNum) return a.classNum - b.classNum;
+          return a.parallel.localeCompare(b.parallel, "ru");
+        });
+      sel.innerHTML = "";
+      list.forEach((c) => {
+        const o = document.createElement("option");
+        o.value = c.id;
+        o.textContent = c.label || `${c.classNum}${c.parallel}`;
+        sel.appendChild(o);
+      });
+      if (prev) {
+        const canRestore = [...sel.options].some((o) => o.value === prev);
+        if (canRestore) sel.value = prev;
+      }
+      if (!sel.value && sel.options.length) sel.value = sel.options[0].value;
+    };
+    const classIdFromModal = (gradeSelId, parallelSelId) => {
+      const grade = String($(gradeSelId)?.value || "").trim();
+      const parallel = String($(parallelSelId)?.value || "").trim().toUpperCase();
+      if (!grade || !parallel) return "";
+      return `${grade}${parallel}`;
+    };
+    const refreshDeleteTargetClasses = () => {
+      const sel = $("#d-delete-target-class");
+      if (!sel) return;
+      sel.innerHTML = "";
+      const g = Number($("#d-delete-grade")?.value || "");
+      const currentDeleteId = classIdFromModal("#d-delete-grade", "#d-delete-parallel");
+      if (!Number.isFinite(g) || g < 1) {
+        const o = document.createElement("option");
+        o.value = "";
+        o.textContent = "Сначала укажите параллель удаляемого класса";
+        sel.appendChild(o);
+        return;
+      }
+      const list = allClasses
+        .filter(
+          (c) =>
+            Number(c.grade) === g && normalizeClassKey(c.id) !== normalizeClassKey(currentDeleteId)
+        )
+        .map((c) => ({ ...c, ...classMeta(c) }))
+        .sort((a, b) => {
+          if (a.classNum !== b.classNum) return a.classNum - b.classNum;
+          return a.parallel.localeCompare(b.parallel, "ru");
+        });
+      if (!list.length) {
+        const ph = document.createElement("option");
+        ph.value = "";
+        ph.textContent = "Нет другого класса в этой параллели";
+        sel.appendChild(ph);
+        return;
+      }
+      list.forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.label || `${c.classNum}${c.parallel}`;
+        sel.appendChild(opt);
+      });
+      sel.value = sel.options[0] ? sel.options[0].value : "";
+    };
+    const loadAuditLog = () =>
+      api("/api/director/audit-log?limit=20")
+        .then((d) => {
+          const rows = (d && d.items) || [];
+          const tb = $("#d-audit-tbody");
+          if (!tb) return;
+          tb.innerHTML = "";
+          rows.forEach((it) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = "<td></td><td></td><td></td><td></td>";
+            tr.children[0].textContent = new Date(it.createdAt).toLocaleString("ru-RU");
+            tr.children[1].textContent = it.action || "—";
+            tr.children[2].textContent = it.actorName || "Система";
+            tr.children[3].textContent =
+              it.payloadJson && typeof it.payloadJson === "object"
+                ? JSON.stringify(it.payloadJson)
+                : "—";
+            tb.appendChild(tr);
+          });
+        })
+        .catch((e) => announceStatus(getApiErrorMessage(e)));
+    const loadClasses = () =>
+      api("/api/director/classes")
+        .then((d) => {
+          allClasses = (d && d.classes) || [];
+          renderClassRows();
+          refreshDeleteTargetClasses();
+          syncScheduleClassSelect({ preserve: true });
+          return allClasses;
+        })
+        .catch((e) => {
+          announceStatus(getApiErrorMessage(e));
+          return [];
+        });
+    const reloadClassesAndStudents = () =>
+      loadClasses().then(() => {
+        if (selectedClassId) {
+          return loadStudentsForClass(selectedClassId, selectedClassNum, selectedClassParallel);
+        }
+        return Promise.resolve();
+      });
+    const openModal = (id) => {
+      const m = $(id);
+      if (m) {
+        m.hidden = false;
+        beginModalMotion(m);
+      }
+    };
+    const closeModal = (id) => {
+      const m = $(id);
+      if (m) {
+        endModalMotion(m);
+        m.hidden = true;
+      }
+    };
+    const normalizeParentChildren = (arr) =>
+      (Array.isArray(arr) ? arr : [])
+        .map((c) => {
+          if (typeof c === "string") return { fullName: c.trim() };
+          if (c && typeof c === "object") {
+            return {
+              fullName: String(c.fullName || "").trim(),
+            };
+          }
+          return { fullName: "" };
+        })
+        .filter((c) => c.fullName.length > 0);
+    const updateParentsMeta = (message) => {
+      const meta = $("#d-parents-meta");
+      if (meta) meta.textContent = message;
+    };
+    const updateParentsTopButton = () => {
+      const scrollWrap = $("#d-parents-scroll");
+      const topBtn = $("#d-parents-scroll-top");
+      if (!scrollWrap || !topBtn) return;
+      topBtn.hidden = scrollWrap.scrollTop < 220;
+    };
+    const syncParentsLoadMoreBtn = () => {
+      const wrap = $("#d-parents-scroll");
+      const btn = $("#d-parents-load-more");
+      if (!wrap || !btn) return;
+      const overflows = wrap.scrollHeight > wrap.clientHeight + 2;
+      btn.hidden = !(parentsHasMore && !overflows);
+    };
+    const PARENT_CHILDREN_INLINE = 2;
+    const fillParentProfileModal = (profile) => {
+      const modal = $("#d-parent-profile-modal");
+      const fio = $("#d-parent-profile-fio");
+      const email = $("#d-parent-profile-email");
+      const phone = $("#d-parent-profile-phone");
+      const avatar = $("#d-parent-profile-avatar");
+      const kids = $("#d-parent-profile-children");
+      const parentId = profile && (profile.userId != null ? profile.userId : profile.id);
+      if (modal && profile && parentId != null) {
+        modal.dataset.parentId = String(parentId);
+        modal.dataset.email = profile.email || "";
+        modal.dataset.phone = String(profile.phone || "").trim();
+      } else if (modal) {
+        delete modal.dataset.parentId;
+        delete modal.dataset.email;
+        delete modal.dataset.phone;
+      }
+      const fioParts =
+        profile &&
+        [profile.lastName, profile.firstName, profile.patronymic]
+          .map((x) => String(x || "").trim())
+          .filter(Boolean);
+      const fullName =
+        fioParts && fioParts.length
+          ? fioParts.join(" ")
+          : profile && profile.fullName
+          ? profile.fullName
+          : "";
+      if (fio) fio.textContent = profile ? fullName || "—" : "—";
+      if (email) email.textContent = profile ? `Почта: ${profile.email || "—"}` : "Почта: —";
+      if (phone) {
+        const ph = profile ? String(profile.phone || "").trim() : "";
+        phone.textContent = ph ? `Телефон: ${ph}` : "Телефон: —";
+      }
+      if (avatar) {
+        const url =
+          profile && profile.avatarUrl && String(profile.avatarUrl).trim()
+            ? String(profile.avatarUrl).trim()
+            : "";
+        avatar.src =
+          url ||
+          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Crect width='100%25' height='100%25' fill='%23eef4ff'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' font-size='12' fill='%23496a9f'%3Eavatar%3C/text%3E%3C/svg%3E";
+      }
+      if (kids) {
+        kids.innerHTML = "";
+        const arr = profile && Array.isArray(profile.children) ? profile.children : [];
+        arr.forEach((k) => {
+          const row = document.createElement("tr");
+          row.innerHTML = "<td></td><td></td>";
+          let childName = k.fullName;
+          if (childName == null || childName === "") {
+            childName = [k.lastName, k.firstName, k.patronymic]
+              .map((x) => String(x || "").trim())
+              .filter(Boolean)
+              .join(" ");
+          }
+          row.children[0].textContent = childName || "—";
+          const cellClass = row.children[1];
+          cellClass.textContent = "";
+          const cls = document.createElement("span");
+          cls.textContent = k.classLabel || "—";
+          cellClass.appendChild(cls);
+          if (k.linkedStudentId == null || k.linkedStudentId === "") {
+            const warn = document.createElement("div");
+            warn.className = "profile-list__sub";
+            warn.style.color = "#b45309";
+            warn.style.fontSize = "0.78rem";
+            warn.style.marginTop = "4px";
+            warn.textContent =
+              "Нет привязки к ученику в школе (дневник недоступен). Обратитесь к директору.";
+            cellClass.appendChild(warn);
+          }
+          kids.appendChild(row);
+        });
+      }
+    };
+    const renderParentRow = (p) => {
+      const tb = $("#d-parents-tbody");
+      if (!tb) return;
+      const tr = document.createElement("tr");
+      tr.className = "d-parent-row";
+      tr.innerHTML = "<td></td><td></td><td></td>";
+      tr.children[0].textContent = p.fullName || "—";
+      tr.children[1].textContent = p.email || "";
+      const childrenCell = tr.children[2];
+      childrenCell.textContent = "";
+      const children = normalizeParentChildren(p.children);
+      const renderChildrenIntoCell = () => {
+        childrenCell.textContent = "";
+        if (!children.length) {
+          childrenCell.textContent = "—";
+          return;
+        }
+        const showExpand = children.length > PARENT_CHILDREN_INLINE;
+        const list = showExpand && !tr.classList.contains("d-parent-row--expanded") ? children.slice(0, PARENT_CHILDREN_INLINE) : children;
+        list.forEach((c, idx) => {
+          const nameNode = document.createElement("span");
+          nameNode.textContent = `${c.fullName} `;
+          childrenCell.appendChild(nameNode);
+          if (idx < list.length - 1) childrenCell.appendChild(document.createElement("br"));
+        });
+        if (showExpand) {
+          const wrap = document.createElement("span");
+          wrap.className = "d-parent-more-wrap";
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "d-parent-more";
+          btn.textContent = tr.classList.contains("d-parent-row--expanded")
+            ? "Свернуть"
+            : `+${children.length - PARENT_CHILDREN_INLINE} ещё`;
+          btn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            tr.classList.toggle("d-parent-row--expanded");
+            renderChildrenIntoCell();
+          });
+          wrap.appendChild(document.createElement("br"));
+          wrap.appendChild(btn);
+          childrenCell.appendChild(wrap);
+        }
+      };
+      renderChildrenIntoCell();
+      tr.addEventListener("click", (ev) => {
+        if (ev.target.closest && ev.target.closest(".d-parent-more")) return;
+        const pid = p.id;
+        fillParentProfileModal(null);
+        const fioEl = $("#d-parent-profile-fio");
+        if (fioEl) fioEl.textContent = "Загрузка…";
+        openModal("#d-parent-profile-modal");
+        api(`/api/director/parents/${encodeURIComponent(String(pid))}/profile`)
+          .then((resp) => {
+            const profile = resp && resp.profile;
+            if (!profile) {
+              fillParentProfileModal(null);
+              if (fioEl) fioEl.textContent = "Не удалось загрузить профиль";
+              announceStatus("Нет данных профиля");
+              return;
+            }
+            fillParentProfileModal(profile);
+          })
+          .catch((e) => {
+            fillParentProfileModal(null);
+            const fe = $("#d-parent-profile-fio");
+            if (fe) fe.textContent = "Ошибка загрузки";
+            announceStatus(getApiErrorMessage(e));
+          });
+      });
+      tb.appendChild(tr);
+    };
+    const loadParents = (opts = {}) => {
+      const reset = opts.reset === true;
+      if (reset) {
+        // Invalidate in-flight response when user changes filters/search quickly.
+        parentsRequestToken += 1;
+      } else if (parentsLoading) {
+        return Promise.resolve();
+      }
+      if (reset) {
+        parentsOffset = 0;
+        parentsHasMore = true;
+        parentsTotal = 0;
+        const tb = $("#d-parents-tbody");
+        if (tb) tb.innerHTML = "";
+      }
+      if (!parentsHasMore && !reset) return Promise.resolve();
+      parentsLoading = true;
+      const token = ++parentsRequestToken;
+      updateParentsMeta("Загрузка...");
+      const search = String($("#d-parent-search")?.value || "").trim();
+      const rawSortBy = String($("#d-parent-sort-by")?.value || "name");
+      const sortBy = rawSortBy === "children" ? "children" : "name";
+      const qs = new URLSearchParams({
+        limit: String(parentsLimit),
+        offset: String(parentsOffset),
+        search,
+        sortBy,
+        sortDir: parentsSortDir,
+      });
+      return api(`/api/director/parents?${qs.toString()}`)
+        .then((d) => {
+          if (token !== parentsRequestToken) return;
+          const apiParents = Array.isArray(d && d.parents) ? d.parents : [];
+          const page = d && d.page ? d.page : null;
+          let rows = apiParents;
+          if (page) {
+            const t = Number(page.total);
+            parentsTotal = Number.isFinite(t) ? t : 0;
+            parentsHasMore = Boolean(page.hasMore);
+            const nextOff = page.nextOffset;
+            parentsOffset =
+              nextOff != null && Number.isFinite(Number(nextOff)) ? Number(nextOff) : parentsOffset + rows.length;
+            if (parentsTotal === 0 && rows.length > 0) {
+              parentsTotal = Math.max(parentsOffset, rows.length);
+            }
+          } else {
+            // Backward compatibility: server returned the full list without pagination meta.
+            let pool = apiParents;
+            const q = normalizeQuick(search);
+            if (q) {
+              pool = pool.filter((p) => {
+                const kids = normalizeParentChildren(p.children)
+                  .map((c) => c.fullName)
+                  .join(" ");
+                return normalizeQuick(`${p.fullName || ""} ${p.email || ""} ${kids}`).includes(q);
+              });
+            }
+            const start = parentsOffset;
+            const end = parentsOffset + parentsLimit;
+            rows = pool.slice(start, end);
+            parentsTotal = pool.length;
+            parentsOffset = Math.min(end, parentsTotal);
+            parentsHasMore = parentsOffset < parentsTotal;
+          }
+          rows.forEach((p) => renderParentRow(p));
+          const tb = $("#d-parents-tbody");
+          if (tb && tb.children.length === 0) {
+            updateParentsMeta("Ничего не найдено");
+          } else if (!parentsHasMore) {
+            updateParentsMeta(`Все записи загружены: ${Math.min(parentsOffset, parentsTotal)} из ${parentsTotal}`);
+          } else {
+            updateParentsMeta(`Показано ${Math.min(parentsOffset, parentsTotal)} из ${parentsTotal}`);
+          }
+          updateParentsTopButton();
+          requestAnimationFrame(() => syncParentsLoadMoreBtn());
+        })
+        .catch((e) => announceStatus(getApiErrorMessage(e)))
+        .finally(() => {
+          if (token === parentsRequestToken) parentsLoading = false;
+        });
+    };
+    const updateTeachersMeta = (message) => {
+      const el = $("#d-teachers-meta");
+      if (el) el.textContent = message;
+    };
+    const updateTeachersTopButton = () => {
+      const scrollWrap = $("#d-teachers-scroll");
+      const topBtn = $("#d-teachers-scroll-top");
+      if (!scrollWrap || !topBtn) return;
+      topBtn.hidden = scrollWrap.scrollTop < 220;
+    };
+    const syncTeachersLoadMoreBtn = () => {
+      const wrap = $("#d-teachers-scroll");
+      const btn = $("#d-teachers-load-more");
+      if (!wrap || !btn) return;
+      const overflows = wrap.scrollHeight > wrap.clientHeight + 2;
+      btn.hidden = !(teachersHasMore && !overflows);
+    };
+    const renderTeacherRow = (t) => {
+      const tb = $("#d-teachers-tbody");
+      if (!tb) return;
+      const tr = document.createElement("tr");
+      tr.innerHTML = "<td></td><td></td><td></td>";
+      tr.children[0].textContent = t.fullName || "—";
+      tr.children[1].textContent = t.email || "";
+      tr.children[2].textContent = Array.isArray(t.subjects) && t.subjects.length ? t.subjects.join(", ") : "—";
+      tb.appendChild(tr);
+    };
+    const loadTeachers = (opts = {}) => {
+      const reset = opts.reset === true;
+      if (reset) {
+        teachersRequestToken += 1;
+      } else if (teachersLoading) {
+        return Promise.resolve();
+      }
+      if (reset) {
+        teachersOffset = 0;
+        teachersHasMore = true;
+        teachersTotal = 0;
+        const tb = $("#d-teachers-tbody");
+        if (tb) tb.innerHTML = "";
+      }
+      if (!teachersHasMore && !reset) return Promise.resolve();
+      teachersLoading = true;
+      const token = ++teachersRequestToken;
+      updateTeachersMeta("Загрузка...");
+      const qs = new URLSearchParams({
+        limit: String(teachersLimit),
+        offset: String(teachersOffset),
+        search: String($("#d-teachers-search")?.value || "").trim(),
+        sortBy: String($("#d-teachers-sort-by")?.value || "name"),
+        sortDir: teachersSortDir,
+      });
+      return api(`/api/director/teachers?${qs.toString()}`)
+        .then((d) => {
+          if (token !== teachersRequestToken) return;
+          const apiRows = Array.isArray(d && d.teachers) ? d.teachers : [];
+          const page = d && d.page ? d.page : null;
+          let rows = apiRows;
+          if (page) {
+            const t = Number(page.total);
+            teachersTotal = Number.isFinite(t) ? t : 0;
+            teachersHasMore = Boolean(page.hasMore);
+            const nextOff = page.nextOffset;
+            teachersOffset =
+              nextOff != null && Number.isFinite(Number(nextOff)) ? Number(nextOff) : teachersOffset + rows.length;
+            if (teachersTotal === 0 && rows.length > 0) {
+              teachersTotal = Math.max(teachersOffset, rows.length);
+            }
+          } else {
+            teachersTotal = rows.length;
+            teachersOffset = rows.length;
+            teachersHasMore = false;
+          }
+          const tb = $("#d-teachers-tbody");
+          if (!rows.length && tb && tb.children.length === 0) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = "<td colspan=\"3\">Учителя не найдены</td>";
+            tb.appendChild(tr);
+            updateTeachersMeta("Ничего не найдено");
+          } else {
+            rows.forEach((t) => renderTeacherRow(t));
+            if (!teachersHasMore) {
+              updateTeachersMeta(`Все записи загружены: ${Math.min(teachersOffset, teachersTotal)} из ${teachersTotal}`);
+            } else {
+              updateTeachersMeta(`Показано ${Math.min(teachersOffset, teachersTotal)} из ${teachersTotal}`);
+            }
+          }
+          updateTeachersTopButton();
+          requestAnimationFrame(() => syncTeachersLoadMoreBtn());
+        })
+        .catch((e) => announceStatus(getApiErrorMessage(e)))
+        .finally(() => {
+          if (token === teachersRequestToken) teachersLoading = false;
+        });
+    };
+    const loadSchedule = () => {
+      const classSel = $("#d-schedule-class");
+      const classId = classSel ? String(classSel.value || "") : "";
+      const quarter = SCHEDULE_FIXED_QUARTER;
+      const meta = $("#d-schedule-meta");
+      if (!classId) {
+        if (meta) meta.textContent = "Выберите класс";
+        announceStatus("Выберите класс для загрузки расписания");
+        return;
+      }
+      if (meta) meta.textContent = "Загрузка...";
+      api(`/api/director/schedule?classId=${encodeURIComponent(classId)}&quarter=${encodeURIComponent(String(quarter))}`)
+        .then((d) => {
+          const rows = (d && d.items) || [];
+          const tb = $("#d-schedule-tbody");
+          if (tb) tb.innerHTML = "";
+          if (!rows.length) {
+            if (tb) {
+              const tr = document.createElement("tr");
+              tr.innerHTML = "<td colspan=\"6\">Для выбранного класса расписание пока не задано</td>";
+              tb.appendChild(tr);
+            }
+            if (meta) meta.textContent = "Нет данных";
+            announceStatus("Для выбранного класса расписание пока не задано");
+            return;
+          }
+          const byDayIdx = new Map();
+          for (const it of rows) {
+            const di = Number(it.weekday_idx);
+            if (!byDayIdx.has(di)) byDayIdx.set(di, []);
+            byDayIdx.get(di).push(it);
+          }
+          const dayOrder = [0, 1, 2, 3, 4].filter((di) => byDayIdx.has(di));
+          for (const di of dayOrder) {
+            const lessons = byDayIdx.get(di).slice();
+            lessons.sort((a, b) => Number(a.lesson_order) - Number(b.lesson_order));
+            lessons.forEach((it, idx) => {
+              const tr = document.createElement("tr");
+              if (idx === 0) tr.classList.add("d-schedule-day-start");
+              if (idx === 0) {
+                tr.innerHTML = "<td></td><td></td><td></td><td></td><td></td><td></td>";
+                if (tr.children.length > 6) tr.children[6].remove();
+                const dayCell = tr.children[0];
+                dayCell.rowSpan = lessons.length;
+                dayCell.className = "d-schedule-day-cell";
+                dayCell.textContent = dayMap[di] || String(di);
+                tr.children[1].textContent = String(it.lesson_order);
+                tr.children[2].textContent = it.subject_name || "";
+                tr.children[3].textContent = it.time_label || "";
+                tr.children[4].textContent = it.teacher_name || "—";
+                tr.children[5].textContent = it.cabinet_label || "—";
+              } else {
+                tr.innerHTML = "<td></td><td></td><td></td><td></td><td></td>";
+                if (tr.children.length > 5) tr.children[0].remove();
+                tr.children[0].textContent = String(it.lesson_order);
+                tr.children[1].textContent = it.subject_name || "";
+                tr.children[2].textContent = it.time_label || "";
+                tr.children[3].textContent = it.teacher_name || "—";
+                tr.children[4].textContent = it.cabinet_label || "—";
+              }
+              if (tb) tb.appendChild(tr);
+            });
+          }
+          if (meta) meta.textContent = `Загружено строк: ${rows.length}`;
+        })
+        .catch((e) => {
+          if (meta) meta.textContent = "Ошибка загрузки";
+          announceStatus(getApiErrorMessage(e));
+        });
+    };
+    const escapeCsv = (s) => {
+      const t = String(s ?? "");
+      if (/[",;\r\n]/.test(t)) return `"${t.replace(/"/g, '""')}"`;
+      return t;
+    };
+    const exportClassStudentsCsv = () => {
+      if (!selectedClassId) {
+        announceStatus("Сначала выберите класс");
+        return;
+      }
+      const list = getClassStudentsDisplayList();
+      const classLabel = `${selectedClassNum || ""}${selectedClassParallel || ""}`.trim() || selectedClassId;
+      const sep = ";";
+      const header = ["№", "ФИО", "Ключ", "Класс"].map(escapeCsv).join(sep);
+      const lines = ["\ufeff" + header];
+      list.forEach((s, i) => {
+        lines.push(
+          [
+            String(i + 1),
+            s.name || "",
+            s.parentLinkCode || "",
+            classLabel,
+          ]
+            .map(escapeCsv)
+            .join(sep)
+        );
+      });
+      const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `students_${classLabel}_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      announceStatus(`Экспорт: ${list.length} строк`);
+    };
+    const exportParentsCsv = () => {
+      const search = String($("#d-parent-search")?.value || "").trim();
+      const sortBy = String($("#d-parent-sort-by")?.value || "name");
+      const limit = 200;
+      let offset = 0;
+      const rowsOut = [];
+      const header = ["ФИО_родителя", "Email", "Телефон", "Дети"];
+      const fetchPage = () => {
+        const qs = new URLSearchParams({
+          limit: String(limit),
+          offset: String(offset),
+          search,
+          sortBy,
+          sortDir: parentsSortDir,
+        });
+        return api(`/api/director/parents?${qs.toString()}`).then((d) => {
+          const parents = Array.isArray(d && d.parents) ? d.parents : [];
+          const page = d && d.page ? d.page : {};
+          parents.forEach((p) => {
+            const kids = normalizeParentChildren(p.children);
+            const kidsStr = kids.map((x) => `${x.fullName}`).join("; ");
+            rowsOut.push([
+              p.fullName || "",
+              p.email || "",
+              p.phone || "",
+              kidsStr,
+            ]);
+          });
+          const hasMore = Boolean(page.hasMore);
+          const nextOff = page.nextOffset;
+          offset = Number.isFinite(Number(nextOff)) ? Number(nextOff) : offset + parents.length;
+          if (hasMore && offset < 5000) return fetchPage();
+          const sep = ";";
+          const lines = [header.map(escapeCsv).join(sep)];
+          rowsOut.forEach((r) => lines.push(r.map(escapeCsv).join(sep)));
+          const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = `parents_${new Date().toISOString().slice(0, 10)}.csv`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+          announceStatus(`Экспорт: ${rowsOut.length} строк`);
+        });
+      };
+      announceStatus("Формируем CSV…");
+      fetchPage().catch((e) => announceStatus(getApiErrorMessage(e)));
+    };
+
+    const exportTeachersCsv = () => {
+      const search = String($("#d-teachers-search")?.value || "").trim();
+      const sortBy = String($("#d-teachers-sort-by")?.value || "name");
+      const limit = 200;
+      let offset = 0;
+      const rowsOut = [];
+      const header = ["ФИО", "Email", "Предметы"];
+      const fetchPage = () => {
+        const qs = new URLSearchParams({
+          limit: String(limit),
+          offset: String(offset),
+          search,
+          sortBy,
+          sortDir: teachersSortDir,
+        });
+        return api(`/api/director/teachers?${qs.toString()}`).then((d) => {
+          const teachers = Array.isArray(d && d.teachers) ? d.teachers : [];
+          const page = d && d.page ? d.page : {};
+          teachers.forEach((t) => {
+            rowsOut.push([
+              t.fullName || "",
+              t.email || "",
+              Array.isArray(t.subjects) ? t.subjects.join(", ") : "",
+            ]);
+          });
+          const hasMore = Boolean(page.hasMore);
+          const nextOff = page.nextOffset;
+          offset = Number.isFinite(Number(nextOff)) ? Number(nextOff) : offset + teachers.length;
+          if (hasMore && offset < 20000) return fetchPage();
+          const sep = ";";
+          const lines = [header.map(escapeCsv).join(sep)];
+          rowsOut.forEach((r) => lines.push(r.map(escapeCsv).join(sep)));
+          const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = `teachers_${new Date().toISOString().slice(0, 10)}.csv`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+          announceStatus(`Экспорт: ${rowsOut.length} строк`);
+        });
+      };
+      announceStatus("Формируем CSV…");
+      fetchPage().catch((e) => announceStatus(getApiErrorMessage(e)));
+    };
+    const setDirectorTab = (next) => {
+      dTab = next;
+      Object.values(dViews).forEach((sel) => {
+        const el = $(sel);
+        if (el) el.classList.add("view--hidden");
+      });
+      const sec = $(dViews[next]);
+      if (sec) sec.classList.remove("view--hidden");
+      document.querySelectorAll("#director-bottomnav .bn-item").forEach((b) => {
+        b.classList.toggle("is-active", b.getAttribute("data-director-tab") === next);
+      });
+      if (next === "classes") {
+        loadClasses().then(loadAuditLog);
+      }
+      if (auditPollTimer) {
+        clearInterval(auditPollTimer);
+        auditPollTimer = 0;
+      }
+      if (next === "classes") {
+        auditPollTimer = setInterval(() => {
+          if (dTab === "classes") loadAuditLog();
+        }, 8000);
+      }
+      if (next === "parents") {
+        const wrap = $("#d-parents-scroll");
+        if (wrap) wrap.scrollTop = 0;
+        loadParents({ reset: true });
+      }
+      if (next === "teachers") {
+        const tw = $("#d-teachers-scroll");
+        if (tw) tw.scrollTop = 0;
+        loadTeachers({ reset: true });
+      }
+      if (next === "schedule") {
+        syncScheduleClassSelect({ preserve: true });
+        loadSchedule();
+      }
+    };
+
+    document.querySelectorAll("#director-bottomnav .bn-item").forEach((b) => {
+      if (b.dataset.bound) return;
+      b.dataset.bound = "1";
+      b.addEventListener("click", () => {
+        const next = b.getAttribute("data-director-tab");
+        if (next) setDirectorTab(next);
+      });
+    });
+    const loadBtn = $("#d-schedule-load");
+    if (loadBtn && !loadBtn.dataset.bound) {
+      loadBtn.dataset.bound = "1";
+      loadBtn.addEventListener("click", loadSchedule);
+    }
+    const scheduleClassSearch = $("#d-schedule-class-search");
+    if (scheduleClassSearch && !scheduleClassSearch.dataset.bound) {
+      scheduleClassSearch.dataset.bound = "1";
+      scheduleClassSearch.addEventListener("input", () => {
+        if (scheduleClassSearchDebounce) clearTimeout(scheduleClassSearchDebounce);
+        scheduleClassSearchDebounce = setTimeout(() => syncScheduleClassSelect({ preserve: true }), 200);
+      });
+      scheduleClassSearch.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          if (scheduleClassSearchDebounce) clearTimeout(scheduleClassSearchDebounce);
+          syncScheduleClassSelect({ preserve: true });
+          loadSchedule();
+        }
+      });
+    }
+    const scheduleGradeFilter = $("#d-schedule-grade-filter");
+    if (scheduleGradeFilter && !scheduleGradeFilter.dataset.bound) {
+      scheduleGradeFilter.dataset.bound = "1";
+      scheduleGradeFilter.addEventListener("change", () => syncScheduleClassSelect({ preserve: true }));
+    }
+    const scheduleClassSel = $("#d-schedule-class");
+    if (scheduleClassSel && !scheduleClassSel.dataset.bound) {
+      scheduleClassSel.dataset.bound = "1";
+      scheduleClassSel.addEventListener("change", () => loadSchedule());
+    }
+    const parentSearch = $("#d-parent-search");
+    const parentSortBy = $("#d-parent-sort-by");
+    const parentsScroll = $("#d-parents-scroll");
+    const parentsTopBtn = $("#d-parents-scroll-top");
+    const parentsLoadMoreBtn = $("#d-parents-load-more");
+    const teachersSearch = $("#d-teachers-search");
+    const teachersSortBy = $("#d-teachers-sort-by");
+    const teachersSortDirBtn = $("#d-teachers-sort-dir");
+    if (teachersSearch && !teachersSearch.dataset.bound) {
+      teachersSearch.dataset.bound = "1";
+      teachersSearch.addEventListener("input", () => {
+        if (teachersSearchDebounceTimer) clearTimeout(teachersSearchDebounceTimer);
+        teachersSearchDebounceTimer = setTimeout(() => loadTeachers({ reset: true }), 300);
+      });
+      teachersSearch.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          if (teachersSearchDebounceTimer) clearTimeout(teachersSearchDebounceTimer);
+          loadTeachers({ reset: true });
+        }
+      });
+    }
+    if (teachersSortBy && !teachersSortBy.dataset.bound) {
+      teachersSortBy.dataset.bound = "1";
+      teachersSortBy.addEventListener("change", () => loadTeachers({ reset: true }));
+    }
+    if (teachersSortDirBtn && !teachersSortDirBtn.dataset.bound) {
+      teachersSortDirBtn.dataset.bound = "1";
+      syncTeachersSortDirBtn();
+      teachersSortDirBtn.addEventListener("click", () => {
+        teachersSortDir = teachersSortDir === "asc" ? "desc" : "asc";
+        syncTeachersSortDirBtn();
+        loadTeachers({ reset: true });
+      });
+    }
+    if (parentSearch && !parentSearch.dataset.bound) {
+      parentSearch.dataset.bound = "1";
+      parentSearch.addEventListener("input", () => {
+        if (parentSearchDebounceTimer) clearTimeout(parentSearchDebounceTimer);
+        parentSearchDebounceTimer = setTimeout(() => {
+          loadParents({ reset: true });
+        }, 300);
+      });
+      parentSearch.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          if (parentSearchDebounceTimer) clearTimeout(parentSearchDebounceTimer);
+          loadParents({ reset: true });
+        }
+      });
+    }
+    if (parentSortBy && !parentSortBy.dataset.bound) {
+      parentSortBy.dataset.bound = "1";
+      parentSortBy.addEventListener("change", () => loadParents({ reset: true }));
+    }
+    const parentSortDirBtn = $("#d-parent-sort-dir");
+    if (parentSortDirBtn && !parentSortDirBtn.dataset.bound) {
+      parentSortDirBtn.dataset.bound = "1";
+      syncParentsSortDirBtn();
+      parentSortDirBtn.addEventListener("click", () => {
+        parentsSortDir = parentsSortDir === "asc" ? "desc" : "asc";
+        syncParentsSortDirBtn();
+        loadParents({ reset: true });
+      });
+    }
+    if (parentsScroll && !parentsScroll.dataset.bound) {
+      parentsScroll.dataset.bound = "1";
+      parentsScroll.addEventListener("scroll", () => {
+        updateParentsTopButton();
+        if (parentsLoading || !parentsHasMore) return;
+        const overflows = parentsScroll.scrollHeight > parentsScroll.clientHeight + 2;
+        if (!overflows) return;
+        const remain = parentsScroll.scrollHeight - parentsScroll.scrollTop - parentsScroll.clientHeight;
+        if (remain < 120) loadParents();
+      });
+    }
+    if (parentsLoadMoreBtn && !parentsLoadMoreBtn.dataset.bound) {
+      parentsLoadMoreBtn.dataset.bound = "1";
+      parentsLoadMoreBtn.addEventListener("click", () => loadParents());
+    }
+    if (parentsTopBtn && !parentsTopBtn.dataset.bound) {
+      parentsTopBtn.dataset.bound = "1";
+      parentsTopBtn.addEventListener("click", () => {
+        const wrap = $("#d-parents-scroll");
+        if (!wrap) return;
+        wrap.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+    const closeParentProfile = $("#d-parent-profile-close");
+    if (closeParentProfile && !closeParentProfile.dataset.bound) {
+      closeParentProfile.dataset.bound = "1";
+      closeParentProfile.addEventListener("click", () => closeModal("#d-parent-profile-modal"));
+    }
+    const bdParentProfile = $("#d-parent-profile-backdrop");
+    if (bdParentProfile && !bdParentProfile.dataset.bound) {
+      bdParentProfile.dataset.bound = "1";
+      bdParentProfile.addEventListener("click", () => closeModal("#d-parent-profile-modal"));
+    }
+
+    const copyDirectorClipboard = (text) => {
+      const s = String(text || "").trim();
+      if (!s) {
+        announceStatus("Нечего копировать");
+        return;
+      }
+      const ok = () => announceStatus("Скопировано");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(s).then(ok).catch(() => announceStatus("Не удалось скопировать"));
+        return;
+      }
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = s;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        ok();
+      } catch {
+        announceStatus("Не удалось скопировать");
+      }
+    };
+    const copyEmailBtn = $("#d-parent-profile-copy-email");
+    if (copyEmailBtn && !copyEmailBtn.dataset.bound) {
+      copyEmailBtn.dataset.bound = "1";
+      copyEmailBtn.addEventListener("click", () => {
+        const m = $("#d-parent-profile-modal");
+        copyDirectorClipboard(m && m.dataset.email);
+      });
+    }
+    const copyPhoneBtn = $("#d-parent-profile-copy-phone");
+    if (copyPhoneBtn && !copyPhoneBtn.dataset.bound) {
+      copyPhoneBtn.dataset.bound = "1";
+      copyPhoneBtn.addEventListener("click", () => {
+        const m = $("#d-parent-profile-modal");
+        copyDirectorClipboard(m && m.dataset.phone);
+      });
+    }
+    const exportParentsBtn = $("#d-parents-export-csv");
+    if (exportParentsBtn && !exportParentsBtn.dataset.bound) {
+      exportParentsBtn.dataset.bound = "1";
+      exportParentsBtn.addEventListener("click", () => exportParentsCsv());
+    }
+    const exportTeachersBtn = $("#d-teachers-export-csv");
+    if (exportTeachersBtn && !exportTeachersBtn.dataset.bound) {
+      exportTeachersBtn.dataset.bound = "1";
+      exportTeachersBtn.addEventListener("click", () => exportTeachersCsv());
+    }
+
+    const clearCreateClassError = () => {
+      const errEl = $("#d-create-class-error");
+      if (errEl) {
+        errEl.hidden = true;
+        errEl.textContent = "";
+      }
+    };
+    const showCreateClassError = (msg) => {
+      const m = String(msg || "").trim();
+      if (!m) return;
+      announceStatus(m);
+      const errEl = $("#d-create-class-error");
+      if (errEl) {
+        errEl.textContent = m;
+        errEl.hidden = false;
+      }
+    };
+    const openCreate = $("#d-open-create-class");
+    if (openCreate && !openCreate.dataset.bound) {
+      openCreate.dataset.bound = "1";
+      openCreate.addEventListener("click", () => {
+        clearCreateClassError();
+        openModal("#d-create-class-modal");
+      });
+    }
+    const closeCreate = $("#d-create-class-cancel");
+    if (closeCreate && !closeCreate.dataset.bound) {
+      closeCreate.dataset.bound = "1";
+      closeCreate.addEventListener("click", () => {
+        clearCreateClassError();
+        closeModal("#d-create-class-modal");
+      });
+    }
+    const bdCreate = $("#d-create-class-backdrop");
+    if (bdCreate && !bdCreate.dataset.bound) {
+      bdCreate.dataset.bound = "1";
+      bdCreate.addEventListener("click", () => {
+        clearCreateClassError();
+        closeModal("#d-create-class-modal");
+      });
+    }
+    const saveCreate = $("#d-create-class-save");
+    if (saveCreate && !saveCreate.dataset.bound) {
+      saveCreate.dataset.bound = "1";
+      saveCreate.addEventListener("click", () => {
+        clearCreateClassError();
+        const classId = classIdFromModal("#d-create-grade", "#d-create-parallel");
+        const grade = Number($("#d-create-grade")?.value || "");
+        if (!classId || !Number.isFinite(grade)) {
+          showCreateClassError("Выберите класс и параллель");
+          return;
+        }
+        const wantKey = normalizeClassKey(classId);
+        const already = allClasses.some((c) => {
+          const idK = normalizeClassKey(c.id);
+          const labelK = normalizeClassKey(c.label);
+          return idK === wantKey || labelK === wantKey;
+        });
+        if (already) {
+          showCreateClassError("Класс с таким названием уже существует");
+          return;
+        }
+        apiPost("/api/director/classes", { classId, grade })
+          .then(() => {
+            clearCreateClassError();
+            closeModal("#d-create-class-modal");
+            reloadClassesAndStudents().then(loadAuditLog);
+          })
+          .catch((e) => showCreateClassError(getApiErrorMessage(e)));
+      });
+    }
+
+    let syncDeleteModeUi = () => {};
+    const deleteModeSelEarly = $("#d-delete-mode");
+    const deleteTargetWrapEarly = $("#d-delete-target-wrap");
+    if (deleteModeSelEarly && !deleteModeSelEarly.dataset.boundEarly) {
+      deleteModeSelEarly.dataset.boundEarly = "1";
+      syncDeleteModeUi = () => {
+        if (!deleteTargetWrapEarly) return;
+        const isMove = String(deleteModeSelEarly.value) === "move";
+        deleteTargetWrapEarly.hidden = !isMove;
+        if (isMove) refreshDeleteTargetClasses();
+      };
+      deleteModeSelEarly.addEventListener("change", syncDeleteModeUi);
+      syncDeleteModeUi();
+    }
+    const deleteGradeSel = $("#d-delete-grade");
+    const deleteParallelSel = $("#d-delete-parallel");
+    if (deleteGradeSel && !deleteGradeSel.dataset.boundDelRefresh) {
+      deleteGradeSel.dataset.boundDelRefresh = "1";
+      deleteGradeSel.addEventListener("change", () => {
+        if (String($("#d-delete-mode")?.value || "") === "move") refreshDeleteTargetClasses();
+      });
+    }
+    if (deleteParallelSel && !deleteParallelSel.dataset.boundDelRefresh) {
+      deleteParallelSel.dataset.boundDelRefresh = "1";
+      deleteParallelSel.addEventListener("change", () => {
+        if (String($("#d-delete-mode")?.value || "") === "move") refreshDeleteTargetClasses();
+      });
+    }
+    const openDelete = $("#d-open-delete-class");
+    if (openDelete && !openDelete.dataset.bound) {
+      openDelete.dataset.bound = "1";
+      openDelete.addEventListener("click", () => {
+        syncDeleteModeUi();
+        refreshDeleteTargetClasses();
+        openModal("#d-delete-class-modal");
+      });
+    }
+    const closeDelete = $("#d-delete-class-cancel");
+    if (closeDelete && !closeDelete.dataset.bound) {
+      closeDelete.dataset.bound = "1";
+      closeDelete.addEventListener("click", () => closeModal("#d-delete-class-modal"));
+    }
+    const bdDelete = $("#d-delete-class-backdrop");
+    if (bdDelete && !bdDelete.dataset.bound) {
+      bdDelete.dataset.bound = "1";
+      bdDelete.addEventListener("click", () => closeModal("#d-delete-class-modal"));
+    }
+    const saveDelete = $("#d-delete-class-save");
+    if (saveDelete && !saveDelete.dataset.bound) {
+      saveDelete.dataset.bound = "1";
+      saveDelete.addEventListener("click", () => {
+        const classId = classIdFromModal("#d-delete-grade", "#d-delete-parallel");
+        const mode = String($("#d-delete-mode")?.value || "move");
+        const targetClassId = String($("#d-delete-target-class")?.value || "").trim();
+        if (!classId) {
+          announceStatus("Выберите класс и параллель");
+          return;
+        }
+        if (mode === "move") {
+          const g = Number($("#d-delete-grade")?.value || "");
+          const candidates = allClasses.filter(
+            (c) =>
+              Number(c.grade) === g &&
+              normalizeClassKey(c.id) !== normalizeClassKey(classId)
+          );
+          if (!candidates.length) {
+            announceStatus("Нет другого класса в этой параллели для переноса");
+            return;
+          }
+          if (!targetClassId) {
+            announceStatus("Выберите целевой класс для переноса");
+            return;
+          }
+        }
+        apiDelete(`/api/director/classes/${encodeURIComponent(classId)}`, { mode, targetClassId })
+          .then(() => {
+            closeModal("#d-delete-class-modal");
+            if (selectedClassId === classId) {
+              selectedClassId = "";
+              selectedClassStudents = [];
+              const stTb = $("#d-class-students-tbody");
+              const stTitle = $("#d-class-students-title");
+              if (stTb) stTb.innerHTML = "";
+              if (stTitle) stTitle.textContent = "Ученики класса —";
+            }
+            reloadClassesAndStudents().then(loadAuditLog);
+          })
+          .catch((e) => announceStatus(getApiErrorMessage(e)));
+      });
+    }
+    const fillRemoveStudentsSelect = () => {
+      const sel = $("#d-remove-student-select");
+      if (!sel) return;
+      sel.innerHTML = "";
+      selectedClassStudents.forEach((s) => {
+        const o = document.createElement("option");
+        o.value = s.id;
+        o.textContent = s.name;
+        sel.appendChild(o);
+      });
+    };
+    const openAddStudent = $("#d-open-add-student");
+    if (openAddStudent && !openAddStudent.dataset.bound) {
+      openAddStudent.dataset.bound = "1";
+      openAddStudent.addEventListener("click", () => {
+        if (!selectedClassId) {
+          announceStatus("Сначала выберите класс в таблице");
+          return;
+        }
+        const ln = $("#d-add-student-last-name");
+        const fn = $("#d-add-student-first-name");
+        const pn = $("#d-add-student-patronymic");
+        if (ln) ln.value = "";
+        if (fn) fn.value = "";
+        if (pn) pn.value = "";
+        openModal("#d-add-student-modal");
+      });
+    }
+    const closeAddStudent = $("#d-add-student-cancel");
+    if (closeAddStudent && !closeAddStudent.dataset.bound) {
+      closeAddStudent.dataset.bound = "1";
+      closeAddStudent.addEventListener("click", () => closeModal("#d-add-student-modal"));
+    }
+    const bdAddStudent = $("#d-add-student-backdrop");
+    if (bdAddStudent && !bdAddStudent.dataset.bound) {
+      bdAddStudent.dataset.bound = "1";
+      bdAddStudent.addEventListener("click", () => closeModal("#d-add-student-modal"));
+    }
+    const saveAddStudent = $("#d-add-student-save");
+    if (saveAddStudent && !saveAddStudent.dataset.bound) {
+      saveAddStudent.dataset.bound = "1";
+      saveAddStudent.addEventListener("click", () => {
+        const lastName = String($("#d-add-student-last-name")?.value || "").trim();
+        const firstName = String($("#d-add-student-first-name")?.value || "").trim();
+        const patronymic = String($("#d-add-student-patronymic")?.value || "").trim();
+        if (!selectedClassId || !lastName || !firstName || !patronymic) {
+          announceStatus("Выберите класс и ученика");
+          return;
+        }
+        const fullNameNorm = `${lastName} ${firstName} ${patronymic}`.trim().replace(/\s+/g, " ");
+        const nameKey = fullNameNorm.toLowerCase();
+        if (
+          selectedClassStudents.some(
+            (s) =>
+              String(s.name || "")
+                .trim()
+                .replace(/\s+/g, " ")
+                .toLowerCase() === nameKey
+          )
+        ) {
+          announceStatus("Ученик с таким ФИО уже есть в этом классе");
+          return;
+        }
+        apiPost(`/api/director/classes/${encodeURIComponent(selectedClassId)}/students`, {
+          fullName: fullNameNorm,
+        })
+          .then(() => {
+            closeModal("#d-add-student-modal");
+            loadClasses().then(() =>
+              loadStudentsForClass(selectedClassId, selectedClassNum, selectedClassParallel)
+            ).then(loadAuditLog);
+          })
+          .catch((e) => announceStatus(getApiErrorMessage(e)));
+      });
+    }
+    const openRemoveStudent = $("#d-open-remove-student");
+    if (openRemoveStudent && !openRemoveStudent.dataset.bound) {
+      openRemoveStudent.dataset.bound = "1";
+      openRemoveStudent.addEventListener("click", () => {
+        if (!selectedClassId) {
+          announceStatus("Сначала выберите класс в таблице");
+          return;
+        }
+        fillRemoveStudentsSelect();
+        openModal("#d-remove-student-modal");
+      });
+    }
+    const closeRemoveStudent = $("#d-remove-student-cancel");
+    if (closeRemoveStudent && !closeRemoveStudent.dataset.bound) {
+      closeRemoveStudent.dataset.bound = "1";
+      closeRemoveStudent.addEventListener("click", () => closeModal("#d-remove-student-modal"));
+    }
+    const bdRemoveStudent = $("#d-remove-student-backdrop");
+    if (bdRemoveStudent && !bdRemoveStudent.dataset.bound) {
+      bdRemoveStudent.dataset.bound = "1";
+      bdRemoveStudent.addEventListener("click", () => closeModal("#d-remove-student-modal"));
+    }
+    const saveRemoveStudent = $("#d-remove-student-save");
+    if (saveRemoveStudent && !saveRemoveStudent.dataset.bound) {
+      saveRemoveStudent.dataset.bound = "1";
+      saveRemoveStudent.addEventListener("click", () => {
+        const studentId = String($("#d-remove-student-select")?.value || "").trim();
+        if (!studentId || !selectedClassId) {
+          announceStatus("Выберите ученика");
+          return;
+        }
+        apiDelete(
+          `/api/director/classes/${encodeURIComponent(selectedClassId)}/students/${encodeURIComponent(studentId)}`
+        )
+          .then(() => {
+            closeModal("#d-remove-student-modal");
+            loadClasses().then(() =>
+              loadStudentsForClass(selectedClassId, selectedClassNum, selectedClassParallel)
+            ).then(loadAuditLog);
+          })
+          .catch((e) => announceStatus(getApiErrorMessage(e)));
+      });
+    }
+    const openBulkAdd = $("#d-open-bulk-add-students");
+    if (openBulkAdd && !openBulkAdd.dataset.bound) {
+      openBulkAdd.dataset.bound = "1";
+      openBulkAdd.addEventListener("click", () => {
+        if (!selectedClassId) {
+          announceStatus("Сначала выберите класс в таблице");
+          return;
+        }
+        const input = $("#d-bulk-students-input");
+        const preview = $("#d-bulk-students-preview");
+        if (input) input.value = "";
+        if (preview) preview.innerHTML = "";
+        openModal("#d-bulk-add-students-modal");
+      });
+    }
+    const closeBulkAdd = $("#d-bulk-students-cancel");
+    if (closeBulkAdd && !closeBulkAdd.dataset.bound) {
+      closeBulkAdd.dataset.bound = "1";
+      closeBulkAdd.addEventListener("click", () => closeModal("#d-bulk-add-students-modal"));
+    }
+    const bdBulkAdd = $("#d-bulk-add-students-backdrop");
+    if (bdBulkAdd && !bdBulkAdd.dataset.bound) {
+      bdBulkAdd.dataset.bound = "1";
+      bdBulkAdd.addEventListener("click", () => closeModal("#d-bulk-add-students-modal"));
+    }
+    const validateBulk = $("#d-bulk-students-validate");
+    if (validateBulk && !validateBulk.dataset.bound) {
+      validateBulk.dataset.bound = "1";
+      validateBulk.addEventListener("click", () => {
+        const parsed = parseBulkStudentsInput($("#d-bulk-students-input")?.value || "");
+        renderBulkPreview(parsed);
+      });
+    }
+    const saveBulk = $("#d-bulk-students-save");
+    if (saveBulk && !saveBulk.dataset.bound) {
+      saveBulk.dataset.bound = "1";
+      saveBulk.addEventListener("click", () => {
+        if (!selectedClassId) {
+          announceStatus("Сначала выберите класс");
+          return;
+        }
+        const parsed = parseBulkStudentsInput($("#d-bulk-students-input")?.value || "");
+        renderBulkPreview(parsed);
+        if (!parsed.valid.length) {
+          announceStatus("Нет валидных строк для добавления");
+          return;
+        }
+        apiPost(`/api/director/classes/${encodeURIComponent(selectedClassId)}/students/bulk`, {
+          students: parsed.valid.map((s) => ({
+            line: s.line,
+            lastName: s.lastName,
+            firstName: s.firstName,
+            patronymic: s.patronymic,
+          })),
+        })
+          .then((result) => {
+            closeModal("#d-bulk-add-students-modal");
+            announceStatus(
+              `Добавлено: ${Number(result.addedCount) || 0}, пропущено: ${(result.skipped || []).length}, ошибок: ${(result.errors || []).length}`
+            );
+            reloadClassesAndStudents().then(loadAuditLog);
+          })
+          .catch((e) => announceStatus(getApiErrorMessage(e)));
+      });
+    }
+    const classSearch = $("#d-class-search");
+    const classGradeFilter = $("#d-class-grade-filter");
+    const classSortBy = $("#d-class-sort-by");
+    const classSortDir = $("#d-class-sort-dir");
+    if (classSearch && !classSearch.dataset.bound) {
+      classSearch.dataset.bound = "1";
+      classSearch.addEventListener("input", renderClassRows);
+    }
+    if (classGradeFilter && !classGradeFilter.dataset.bound) {
+      classGradeFilter.dataset.bound = "1";
+      classGradeFilter.addEventListener("change", renderClassRows);
+    }
+    if (classSortBy && !classSortBy.dataset.bound) {
+      classSortBy.dataset.bound = "1";
+      classSortBy.addEventListener("change", renderClassRows);
+    }
+    if (classSortDir && !classSortDir.dataset.bound) {
+      classSortDir.dataset.bound = "1";
+      classSortDir.addEventListener("click", () => {
+        dSortDir = dSortDir === "asc" ? "desc" : "asc";
+        const isAsc = dSortDir === "asc";
+        classSortDir.textContent = isAsc ? "↑" : "↓";
+        classSortDir.setAttribute("aria-label", isAsc ? "По возрастанию" : "По убыванию");
+        classSortDir.title = isAsc ? "По возрастанию" : "По убыванию";
+        renderClassRows();
+      });
+    }
+    const classStudentsSearch = $("#d-class-students-search");
+    if (classStudentsSearch && !classStudentsSearch.dataset.bound) {
+      classStudentsSearch.dataset.bound = "1";
+      classStudentsSearch.addEventListener("input", () => {
+        if (classStudentsSearchDebounce) clearTimeout(classStudentsSearchDebounce);
+        classStudentsSearchDebounce = setTimeout(() => renderSelectedClassStudents(), 200);
+      });
+    }
+    const classStudentsSortDirBtn = $("#d-class-students-sort-dir");
+    if (classStudentsSortDirBtn && !classStudentsSortDirBtn.dataset.bound) {
+      classStudentsSortDirBtn.dataset.bound = "1";
+      syncClassStudentsSortDirBtn();
+      classStudentsSortDirBtn.addEventListener("click", () => {
+        classStudentsSortDir = classStudentsSortDir === "asc" ? "desc" : "asc";
+        syncClassStudentsSortDirBtn();
+        renderSelectedClassStudents();
+      });
+    }
+    const classStudentsExport = $("#d-class-students-export-csv");
+    if (classStudentsExport && !classStudentsExport.dataset.bound) {
+      classStudentsExport.dataset.bound = "1";
+      classStudentsExport.addEventListener("click", () => exportClassStudentsCsv());
+    }
+    const teachersScroll = $("#d-teachers-scroll");
+    const teachersLoadMoreBtn = $("#d-teachers-load-more");
+    const teachersTopBtn = $("#d-teachers-scroll-top");
+    if (teachersScroll && !teachersScroll.dataset.bound) {
+      teachersScroll.dataset.bound = "1";
+      teachersScroll.addEventListener("scroll", () => {
+        updateTeachersTopButton();
+        if (teachersLoading || !teachersHasMore) return;
+        // Не догружаем, пока пользователь не сместился вниз.
+        // Иначе при небольшом количестве строк на первом экране список быстро догружается до конца.
+        if ((teachersScroll.scrollTop || 0) <= 0) return;
+        const overflows = teachersScroll.scrollHeight > teachersScroll.clientHeight + 2;
+        if (!overflows) return;
+        const remain = teachersScroll.scrollHeight - teachersScroll.scrollTop - teachersScroll.clientHeight;
+        if (remain < 120) loadTeachers();
+      });
+    }
+    if (teachersLoadMoreBtn && !teachersLoadMoreBtn.dataset.bound) {
+      teachersLoadMoreBtn.dataset.bound = "1";
+      teachersLoadMoreBtn.addEventListener("click", () => loadTeachers());
+    }
+    if (teachersTopBtn && !teachersTopBtn.dataset.bound) {
+      teachersTopBtn.dataset.bound = "1";
+      teachersTopBtn.addEventListener("click", () => {
+        const wrap = $("#d-teachers-scroll");
+        if (wrap) wrap.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+    loadClasses().then(() => setDirectorTab(dTab));
   }
 
   function updateTeacherHeader() {
@@ -1324,8 +3089,87 @@
     if (c) {
       $("#hdr-name").textContent = `Класс ${c.label}`;
       $("#hdr-class").textContent =
-        (teacherProfile && teacherProfile.subject) || "Химия";
+        (teacherProfile && teacherProfile.subject) || PRIMARY_GRADES_SUBJECT;
     }
+  }
+
+  function syncTeacherSubjectUi() {
+    const wrap = $("#teacher-subject-wrap");
+    const sel = $("#teacher-subject-select");
+    const hint = $("#teacher-head-hint");
+    if (!teacherProfile || appRole !== "teacher") {
+      if (wrap) wrap.hidden = true;
+      return;
+    }
+    const subjects =
+      Array.isArray(teacherProfile.subjects) && teacherProfile.subjects.length
+        ? teacherProfile.subjects
+        : [teacherProfile.subject];
+    teacherProfile.subjects = subjects;
+    const curRaw = String(teacherProfile.subject || "").trim();
+    if (!subjects.includes(curRaw)) {
+      teacherProfile.subject = subjects.includes("Математика")
+        ? "Математика"
+        : subjects[0];
+    }
+    if (wrap && sel) {
+      wrap.hidden = subjects.length <= 1;
+      if (!wrap.hidden) {
+        const cur = teacherProfile.subject;
+        sel.innerHTML = "";
+        subjects.forEach((s) => {
+          const o = document.createElement("option");
+          o.value = s;
+          o.textContent = s;
+          sel.appendChild(o);
+        });
+        sel.value = subjects.includes(cur) ? cur : subjects[0];
+        if (sel.value !== teacherProfile.subject) {
+          teacherProfile.subject = sel.value;
+        }
+        if (!sel.dataset.bound) {
+          sel.dataset.bound = "1";
+          sel.addEventListener("change", () => {
+            const v = sel.value;
+            if (!v || v === teacherProfile.subject) return;
+            apiPatch("/api/teacher/active-subject", { subjectName: v })
+              .then((r) => {
+                teacherProfile.subject = r.subject || v;
+                if (Array.isArray(r.subjects)) teacherProfile.subjects = r.subjects;
+                const line = $("#teacher-profile");
+                if (line) {
+                  line.textContent = `${teacherProfile.name} — ${teacherProfile.subject}`;
+                }
+                updateTeacherHeader();
+                syncTeacherSubjectUi();
+                loadTeacherDiary();
+              })
+              .catch((err) => {
+                const msg = getApiErrorMessage(err);
+                announceStatus(msg);
+                sel.value = teacherProfile.subject;
+              });
+          });
+        }
+      }
+    }
+    const profLine = $("#teacher-profile");
+    if (profLine) {
+      profLine.textContent = `${teacherProfile.name} — ${teacherProfile.subject}`;
+    }
+    if (appRole === "teacher") {
+      updateTeacherHeader();
+    }
+    if (hint) {
+      hint.textContent = `Класс выбирается в шапке. На вкладке «Журнал» — уроки предмета «${teacherProfile.subject}» (при нескольких предметах — переключатель в шапке рядом с «Профиль»). Редактирование урока — кнопка «Изменить». Таблица ниже — оценки и посещаемость за урок выбранного предмета.`;
+    }
+    const cht = $("#chem-table-title");
+    const tbl = $("#t-chem-table");
+    const activeSubj = teacherProfile.subject || PRIMARY_GRADES_SUBJECT;
+    if (cht) cht.textContent = `${activeSubj}: оценки и посещаемость за день`;
+    if (tbl) tbl.setAttribute("aria-label", "Ученики и оценки за урок выбранного предмета");
+    const block = $("#chem-table-block");
+    if (block) block.hidden = false;
   }
 
   function updateTeacherDiaryNavState() {
@@ -1505,6 +3349,93 @@
     }
   }
 
+  function renderParentCalendar() {
+    const title = $("#p-cal-title");
+    const grid = $("#p-cal-grid");
+    if (!title || !grid) return;
+    const y = pCalViewYear;
+    const m0 = pCalViewMonth;
+    const mid = new Date(y, m0, 15, 12, 0, 0);
+    title.textContent = mid.toLocaleDateString("ru-RU", {
+      month: "long",
+      year: "numeric",
+    });
+    grid.innerHTML = "";
+    const hasSchoolSet = diaryDates.length > 0;
+    const dim = new Date(y, m0 + 1, 0, 12, 0, 0).getDate();
+    const firstDow = new Date(y, m0, 1, 12, 0, 0).getDay();
+    const lead = (firstDow + 6) % 7;
+
+    for (let i = 0; i < lead; i++) {
+      const pad = document.createElement("div");
+      pad.className = "t-cal-pad";
+      grid.appendChild(pad);
+    }
+    for (let d = 1; d <= dim; d++) {
+      const iso = isoFromYmd(y, m0 + 1, d);
+      const wknd = isWeekendYmd(y, m0, d);
+      const inSchool = !hasSchoolSet || diaryDates.indexOf(iso) >= 0;
+      const isSel = iso === diaryDate;
+
+      if (wknd) {
+        const cell = document.createElement("div");
+        cell.className = "t-cal-cell t-cal-cell--weekend";
+        cell.textContent = String(d);
+        cell.title = "Выходной";
+        grid.appendChild(cell);
+      } else if (!inSchool) {
+        const cell = document.createElement("div");
+        cell.className = "t-cal-cell t-cal-cell--off";
+        cell.textContent = String(d);
+        cell.title = "Нет учебного дня";
+        grid.appendChild(cell);
+      } else {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "t-cal-cell t-cal-cell--day" + (isSel ? " is-selected" : "");
+        btn.textContent = String(d);
+        btn.addEventListener("click", () => {
+          diaryDate = iso;
+          closeParentCalendar();
+          setTab("diary");
+          loadDiary();
+        });
+        grid.appendChild(btn);
+      }
+    }
+  }
+
+  function openParentCalendar() {
+    if (!parentHasChild() || !diaryDates.length) {
+      announceStatus("Нет учебных дней в дневнике для выбора даты.");
+      return;
+    }
+    const p = parseIsoParts(diaryDate);
+    if (p.y && p.m) {
+      pCalViewYear = p.y;
+      pCalViewMonth = p.m - 1;
+    } else {
+      pCalViewYear = 2026;
+      pCalViewMonth = 2;
+    }
+    renderParentCalendar();
+    const modal = $("#p-cal-modal");
+    if (modal) {
+      modal.hidden = false;
+      beginModalMotion(modal);
+      installFocusTrap(modal, closeParentCalendar);
+    }
+  }
+
+  function closeParentCalendar() {
+    removeFocusTrap();
+    const modal = $("#p-cal-modal");
+    if (modal) {
+      endModalMotion(modal);
+      modal.hidden = true;
+    }
+  }
+
   function setTeacherTab(next) {
     tTab = next;
     document.querySelectorAll(".t-view").forEach((v) => v.classList.add("view--hidden"));
@@ -1533,6 +3464,8 @@
 
   function loadChemTable() {
     const tbody = $("#t-chem-tbody");
+    const block = $("#chem-table-block");
+    if (block) block.hidden = false;
     if (!tbody) return;
     tbody.innerHTML = chemTableSkeletonHtml();
     tbody.setAttribute("aria-busy", "true");
@@ -1749,6 +3682,18 @@
   }
 
   function loadParentMeetings() {
+    if (!parentHasChild()) {
+      const tbody = $("#meetings-tbody");
+      const empty = $("#meetings-empty");
+      const msg = $("#meetings-msg");
+      if (tbody) tbody.innerHTML = "";
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = "Сначала выберите ребёнка в шапке.";
+      }
+      if (empty) empty.hidden = false;
+      return Promise.resolve();
+    }
     return loadMeetingsTable(
       `/api/children/${encodeURIComponent(childId)}/meeting`,
       "#meetings-tbody",
@@ -1801,11 +3746,8 @@
         $("#t-weekday").textContent = day.weekday;
         $("#t-month-y").textContent = `${day.monthGenitive}, ${day.year}`;
         lessonsEl.innerHTML = "";
-        const chemOnly = day.lessons.filter((les) => les.title === CHEM_SUBJ);
-        chemOnly.forEach((les) => {
-          lessonsEl.appendChild(
-            renderLesson(les, { teacherEdit: true, onlyChemistry: true })
-          );
+        day.lessons.forEach((les) => {
+          lessonsEl.appendChild(renderLesson(les, { teacherEdit: true }));
         });
         updateTeacherDiaryNavState();
         loadChemTable();
@@ -1840,6 +3782,7 @@
         teacherProfile = p;
         const line = $("#teacher-profile");
         if (line) line.textContent = `${p.name} — ${p.subject}`;
+        syncTeacherSubjectUi();
         return api("/api/teacher/classes");
       })
       .then((d) => {
@@ -1890,6 +3833,14 @@
   function loadDiary(enterFrom) {
     const lessonsEl = $("#diary-lessons");
     const card = $("#diary-card");
+    if (!parentHasChild()) {
+      if (lessonsEl) {
+        lessonsEl.removeAttribute("aria-busy");
+        lessonsEl.innerHTML =
+          '<p class="placeholder-msg" style="text-align:center;color:#888;font-size:0.88rem">Выберите ребёнка в шапке или привяжите ученика в профиле.</p>';
+      }
+      return Promise.resolve();
+    }
     lessonsEl.innerHTML = diaryLessonsSkeletonHtml();
     lessonsEl.setAttribute("aria-busy", "true");
     return api(
@@ -1926,9 +3877,18 @@
   }
 
   function loadPerformance() {
+    if (!parentHasChild()) {
+      $("#perf-date-line").textContent = "—";
+      const perfQuarterEl = $("#perf-quarter") || $("#perf-trimester");
+      if (perfQuarterEl) perfQuarterEl.textContent = "";
+      const box = $("#perf-rows");
+      if (box) box.innerHTML = "";
+      return;
+    }
     api(`/api/children/${encodeURIComponent(childId)}/performance`).then((p) => {
       $("#perf-date-line").textContent = p.dateLabel;
-      $("#perf-trimester").textContent = p.trimesterLabel;
+      const perfQuarterEl = $("#perf-quarter") || $("#perf-trimester");
+      if (perfQuarterEl) perfQuarterEl.textContent = p.quarterLabel || "—";
       const box = $("#perf-rows");
       box.innerHTML = "";
       p.rows.forEach((row) => {
@@ -1979,7 +3939,8 @@
         const msg = getApiErrorMessage(err);
         announceStatus(msg);
         $("#perf-date-line").textContent = "—";
-        $("#perf-trimester").textContent = "";
+        const perfQuarterEl = $("#perf-quarter") || $("#perf-trimester");
+        if (perfQuarterEl) perfQuarterEl.textContent = "";
         const box = $("#perf-rows");
         if (box) {
           box.innerHTML = '<p class="placeholder-msg"></p>';
@@ -1990,6 +3951,7 @@
   }
 
   function loadGradesList() {
+    if (!parentHasChild()) return;
     api(
       `/api/children/${encodeURIComponent(childId)}/grades?subject=${encodeURIComponent(
         gradesSubjectId
@@ -2064,26 +4026,72 @@
   }
 
   function loadFinals() {
-    api(`/api/children/${encodeURIComponent(childId)}/finals`).then((f) => {
-      $("#finals-year").textContent = f.yearLabel;
+    if (!parentHasChild()) {
       const box = $("#finals-rows");
-      box.innerHTML = "";
-      f.rows.forEach((r) => {
-        const row = document.createElement("div");
-        row.className = "frow";
-        const name = document.createElement("div");
-        name.className = "frow__name";
-        name.textContent = r.subject;
-        row.appendChild(name);
-        [r.t1, r.t2, r.t3, r.year].forEach((v) => {
-          const c = document.createElement("div");
-          c.className = "frow__g";
-          c.textContent = v != null ? String(v) : "—";
-          row.appendChild(c);
+      if (box) box.innerHTML = "";
+      return;
+    }
+    const child = encodeURIComponent(childId);
+    api(`/api/children/${child}/finals`)
+      .then((f) => {
+        $("#finals-year").textContent = f.yearLabel;
+        const box = $("#finals-rows");
+        box.innerHTML = "";
+
+        const fmtInt = (n) => {
+          if (n == null || Number.isNaN(Number(n))) return "—";
+          return String(Math.round(Number(n)));
+        };
+        const fmtDec = (n) => {
+          if (n == null || Number.isNaN(Number(n))) return "—";
+          return Number(n).toFixed(2);
+        };
+        /** Годовая: строго среднее четырёх четвертей, 2 знака. */
+        const yearFromQuarters = (a, b, c, d) => {
+          const xs = [a, b, c, d];
+          if (xs.some((v) => v == null || !Number.isFinite(Number(v)))) return null;
+          const s = xs.reduce((acc, v) => acc + Number(v), 0);
+          return Number((s / 4).toFixed(2));
+        };
+
+        (f.rows || []).forEach((r) => {
+          const row = document.createElement("div");
+          row.className = "frow";
+          const name = document.createElement("div");
+          name.className = "frow__name";
+          name.textContent = r.subject;
+          row.appendChild(name);
+          const vals = document.createElement("div");
+          vals.className = "frow__vals";
+
+          const q1 = r.t1 == null ? null : Number(r.t1);
+          const q2 = r.t2 == null ? null : Number(r.t2);
+          const q3 = r.t3 == null ? null : Number(r.t3);
+          const q4 = r.t4 == null ? null : Number(r.t4);
+          const yearAvg = yearFromQuarters(q1, q2, q3, q4);
+
+          [fmtInt(q1), fmtInt(q2), fmtInt(q3), fmtDec(q4), yearAvg == null ? "—" : fmtDec(yearAvg)].forEach(
+            (text) => {
+              const c = document.createElement("div");
+              c.className = "frow__g";
+              c.textContent = text;
+              vals.appendChild(c);
+            }
+          );
+          row.appendChild(vals);
+          box.appendChild(row);
         });
-        box.appendChild(row);
+      })
+      .catch((err) => {
+        const msg = getApiErrorMessage(err);
+        announceStatus(msg);
+        const box = $("#finals-rows");
+        if (box) {
+          box.innerHTML = '<p class="placeholder-msg"></p>';
+          const p = box.querySelector(".placeholder-msg");
+          if (p) p.textContent = msg;
+        }
       });
-    });
   }
 
   document.querySelectorAll(".bottomnav:not(.bottomnav--teacher) .bn-item").forEach((b) => {
@@ -2146,6 +4154,36 @@
         tCalViewYear += 1;
       }
       renderTeacherCalendar();
+    });
+  }
+
+  document.querySelectorAll(".p-cal-open").forEach((btn) => {
+    btn.addEventListener("click", openParentCalendar);
+  });
+  const pCalBd = $("#p-cal-backdrop");
+  if (pCalBd) pCalBd.addEventListener("click", closeParentCalendar);
+  const pCalClose = $("#p-cal-close");
+  if (pCalClose) pCalClose.addEventListener("click", closeParentCalendar);
+  const pCalPrev = $("#p-cal-prev");
+  if (pCalPrev) {
+    pCalPrev.addEventListener("click", () => {
+      pCalViewMonth -= 1;
+      if (pCalViewMonth < 0) {
+        pCalViewMonth = 11;
+        pCalViewYear -= 1;
+      }
+      renderParentCalendar();
+    });
+  }
+  const pCalNext = $("#p-cal-next");
+  if (pCalNext) {
+    pCalNext.addEventListener("click", () => {
+      pCalViewMonth += 1;
+      if (pCalViewMonth > 11) {
+        pCalViewMonth = 0;
+        pCalViewYear += 1;
+      }
+      renderParentCalendar();
     });
   }
 
@@ -2291,7 +4329,10 @@
         ? {
             email,
             password,
-            role: roleSel && roleSel.value === "teacher" ? "teacher" : "parent",
+            role:
+              roleSel && (roleSel.value === "teacher" || roleSel.value === "director")
+                ? roleSel.value
+                : "parent",
             lastName: ($("#auth-last-name") && $("#auth-last-name").value) || "",
             firstName: ($("#auth-first-name") && $("#auth-first-name").value) || "",
             patronymic: ($("#auth-patronymic") && $("#auth-patronymic").value) || "",
@@ -2301,7 +4342,7 @@
     apiPost(path, payload)
       .then((body) => {
         const role = body && body.user && body.user.role;
-        if (role !== "parent" && role !== "teacher") {
+        if (role !== "parent" && role !== "teacher" && role !== "director") {
           throw new Error("Некорректный ответ сервера");
         }
         closeAuthModal();
@@ -2326,14 +4367,64 @@
   if (profBd) profBd.addEventListener("click", () => closeProfileModal());
   const profChAdd = $("#prof-child-add");
   if (profChAdd) profChAdd.addEventListener("click", () => submitProfileAddChild());
+  const profRedeem = $("#prof-link-key-redeem");
+  if (profRedeem) profRedeem.addEventListener("click", () => submitProfileRedeemLinkKey());
   const profClAdd = $("#prof-class-add");
   if (profClAdd) profClAdd.addEventListener("click", () => submitProfileAddClass());
+
+  const profPhoneSave = $("#prof-phone-save");
+  if (profPhoneSave) {
+    profPhoneSave.addEventListener("click", () => {
+      setProfileError("");
+      const inp = $("#prof-phone");
+      const v = inp ? String(inp.value || "") : "";
+      profPhoneSave.disabled = true;
+      apiPatch("/api/profile/phone", { phone: v })
+        .then((data) => {
+          renderProfileData(data);
+          announceStatus("Телефон сохранён");
+        })
+        .catch((err) => setProfileError(getApiErrorMessage(err)))
+        .finally(() => {
+          profPhoneSave.disabled = false;
+        });
+    });
+  }
+  function copyToClipboardAnnounce(text, emptyMsg) {
+    const t = String(text || "").trim();
+    if (!t) {
+      announceStatus(emptyMsg || "Нечего копировать");
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(
+        () => announceStatus("Скопировано"),
+        () => announceStatus("Не удалось скопировать")
+      );
+    } else {
+      announceStatus("Копирование недоступно в этом браузере");
+    }
+  }
+  const profCopyEmail = $("#prof-copy-email");
+  if (profCopyEmail) {
+    profCopyEmail.addEventListener("click", () => {
+      const em = $("#profile-email-line");
+      copyToClipboardAnnounce(em ? em.textContent : "", "Нет адреса почты");
+    });
+  }
+  const profCopyPhone = $("#prof-copy-phone");
+  if (profCopyPhone) {
+    profCopyPhone.addEventListener("click", () => {
+      const inp = $("#prof-phone");
+      copyToClipboardAnnounce(inp ? inp.value : "", "Нет номера телефона");
+    });
+  }
 
   fetch("/api/auth/me", fetchCred)
     .then((r) => (r.ok ? r.json() : null))
     .then((data) => {
       const role = data && data.user && data.user.role;
-      if (role === "parent" || role === "teacher") {
+      if (role === "parent" || role === "teacher" || role === "director") {
         showMainApp();
         bootstrapAfterLogin(role);
       } else {

@@ -2,18 +2,31 @@ import "dotenv/config";
 import cookieSession from "cookie-session";
 import express from "express";
 import path from "path";
-import helmet from "helmet";
+import helmet, { contentSecurityPolicy as csp } from "helmet";
 import rateLimit from "express-rate-limit";
-import { requireParent, requireTeacher } from "./middleware/auth";
+import { requireDirector, requireParent, requireTeacher } from "./middleware/auth";
 import { apiRouter } from "./routes/api";
 import { authRouter } from "./routes/auth";
+import { parentRouter } from "./routes/parent";
 import { profileRouter } from "./routes/profile";
 import { teacherRouter } from "./routes/teacher";
+import { directorRouter } from "./routes/director";
 
 const app = express();
 
 app.disable("x-powered-by");
-app.use(helmet());
+
+const cspDirectives = {
+  ...csp.getDefaultDirectives(),
+  "connect-src": ["'self'"],
+};
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: cspDirectives,
+    },
+  })
+);
 
 app.set("trust proxy", 1);
 
@@ -56,6 +69,13 @@ const teacherLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const directorLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const profileLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 60,
@@ -65,11 +85,15 @@ const profileLimiter = rateLimit({
 
 app.use("/api/auth", authLimiter);
 app.use("/api/teacher", teacherLimiter);
+app.use("/api/director", directorLimiter);
 app.use("/api/profile", profileLimiter);
+app.use("/api/parent", profileLimiter);
 
 app.use("/api/auth", authRouter);
 app.use("/api/profile", profileRouter);
+app.use("/api/parent", parentRouter);
 app.use("/api/teacher", requireTeacher, teacherRouter);
+app.use("/api/director", requireDirector, directorRouter);
 app.use("/api", requireParent, apiRouter);
 
 const publicDir = path.join(process.cwd(), "public");

@@ -1,0 +1,11 @@
+# Blueprint для Render: https://render.com/docs/blueprint-spec
+# Секреты (DATABASE_URL, SESSION_SECRET) задаются в панели, не в репозитории.
+# postinstall в package.json вызывает `npm run build`, поэтому достаточно npm install
+# (без второго прогона tsc). Вручную в UI можно указать то же или: npm install --include=dev && npm run build
+services:
+  - type: web
+    name: elektronnyj-dnevnik
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node dist/server.js

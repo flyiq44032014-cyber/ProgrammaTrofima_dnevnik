@@ -4,14 +4,28 @@ import * as db from "../db/repository";
 
 const DB_ENABLED = Boolean(process.env.DATABASE_URL);
 
-/** Записи с classScheduleId — демо «класс как ребёнок» для расписания учителя; в списке выбора у родителя не показываем. */
+/**
+ * В режиме без БД — скрываем демо-строки «класс как ребёнок» (classScheduleId у фиктивных id demo*).
+ * В режиме с БД — class_schedule_id у настоящих учеников — норма (общий дневник класса); всех показываем.
+ */
 export function childrenForParentPicker(list: Child[]): Child[] {
+  if (DB_ENABLED) return list;
   return list.filter((c) => !c.classScheduleId);
 }
 
 export async function getChildren() {
   if (DB_ENABLED) return db.getChildren();
   return mem.getChildren();
+}
+
+export async function getChildrenForParent(parentUserId: number) {
+  if (DB_ENABLED) return db.getChildrenForParent(parentUserId);
+  return mem.getChildren();
+}
+
+export async function childBelongsToParent(parentUserId: number, studentId: string): Promise<boolean> {
+  if (!DB_ENABLED) return true;
+  return db.childBelongsToParent(parentUserId, studentId);
 }
 
 export async function getDiary(childId: string, isoDate: string) {

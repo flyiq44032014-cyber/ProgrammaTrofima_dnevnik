@@ -44,7 +44,7 @@ export interface PerformanceRow {
 }
 
 export interface PerformancePayload {
-  trimesterLabel: string;
+  quarterLabel: string;
   dateLabel: string;
   dayNum: number;
   weekday: string;
@@ -74,6 +74,7 @@ export interface FinalRow {
   t1?: number | null;
   t2?: number | null;
   t3?: number | null;
+  t4?: number | null;
   year?: number | null;
 }
 

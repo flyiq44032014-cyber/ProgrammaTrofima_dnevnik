@@ -1,6 +1,6 @@
-import { getPool } from "./pool";
+import { getPool, withPgRetry } from "./pool";
 
-export type UserRole = "parent" | "teacher";
+export type UserRole = "parent" | "teacher" | "director";
 
 export interface AuthUserRow {
   id: number;
@@ -10,14 +10,16 @@ export interface AuthUserRow {
 }
 
 export async function dbFindUserByEmail(emailLower: string): Promise<AuthUserRow | null> {
-  const { rows } = await getPool().query<AuthUserRow>(
-    `SELECT id, email, password_hash, role FROM users WHERE lower(email) = $1`,
-    [emailLower.trim().toLowerCase()]
-  );
-  const r = rows[0];
-  if (!r) return null;
-  if (r.role !== "parent" && r.role !== "teacher") return null;
-  return r;
+  return withPgRetry(async () => {
+    const { rows } = await getPool().query<AuthUserRow>(
+      `SELECT id, email, password_hash, role FROM users WHERE lower(email) = $1`,
+      [emailLower.trim().toLowerCase()]
+    );
+    const r = rows[0];
+    if (!r) return null;
+    if (r.role !== "parent" && r.role !== "teacher" && r.role !== "director") return null;
+    return r;
+  });
 }
 
 export interface RegisterProfile {

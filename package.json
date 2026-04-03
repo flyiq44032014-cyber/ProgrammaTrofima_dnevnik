@@ -6,10 +6,20 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
+    "postinstall": "npm run build",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "typecheck": "tsc --noEmit",
     "db:seed": "npm run build && node dist/db/seed.js",
+    "db:seed:simple": "npm run build && node dist/db/seedSimple.js",
+    "db:seed:demo-users": "npm run build && node dist/db/seedDemoUsers.js",
+    "db:seed:surnames-400": "npm run build && node dist/db/seedStudentSurnames400.js",
+    "db:seed:family-parents": "npm run build && node dist/db/seedFamilyParents.js",
+    "db:backfill:parent-student-ids": "npm run build && node dist/db/backfillUserParentStudentIds.js",
+    "db:backfill:student-performance": "npm run build && node dist/db/backfillStudentPerformanceFromClass.js",
+    "db:backfill:finals-quarters": "npm run build && node dist/db/backfillFinalsQuarters.js",
+    "db:activate:parents": "npm run build && node dist/db/activateParentAccounts.js",
+    "db:activate:teachers": "npm run build && node dist/db/activateTeacherAccounts.js",
     "test": "vitest run"
   },
   "engines": {

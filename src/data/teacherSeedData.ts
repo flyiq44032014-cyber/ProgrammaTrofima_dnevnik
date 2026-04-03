@@ -2,14 +2,17 @@ import type { DiaryDay, DiaryLesson } from "../types";
 
 export const TEACHER_PROFILE = {
   name: "Петров Алексей Викторович",
-  subject: "Химия",
+  subject: "Математика",
 };
 
+/** Предметы демо-учителя в режиме без БД (как у директора: несколько строк в teacher_subjects) */
+export const DEMO_TEACHER_SUBJECTS = ["Математика", "Информатика"] as const;
+
 export const schoolClassesMeta = [
-  { id: "c8a", grade: 8, label: "8 А", subjectName: "Химия" },
-  { id: "c9a", grade: 9, label: "9 А", subjectName: "Химия" },
-  { id: "c10a", grade: 10, label: "10 А", subjectName: "Химия" },
-  { id: "c11a", grade: 11, label: "11 А", subjectName: "Химия" },
+  { id: "c8a", grade: 8, label: "8 А", subjectName: "Математика" },
+  { id: "c9a", grade: 9, label: "9 А", subjectName: "Математика" },
+  { id: "c10a", grade: 10, label: "10 А", subjectName: "Математика" },
+  { id: "c11a", grade: 11, label: "11 А", subjectName: "Математика" },
 ];
 
 const firstNames = [
@@ -140,7 +143,10 @@ const schoolDays = buildTwoWeekSchoolDays(2026, 2, 23);
 /** Даты учебных дней в демо (2 недели, пн–пт) */
 export const TEACHER_WEEK_ISOS = schoolDays.map((w) => w.iso);
 
-export const CHEMISTRY_LESSON_TITLE = "Химия";
+/** Основной предмет для журнала/оценок в демо (раньше была химия) */
+export const TEACHER_PRIMARY_LESSON_TITLE = "Математика";
+/** @deprecated используйте TEACHER_PRIMARY_LESSON_TITLE */
+export const CHEMISTRY_LESSON_TITLE = TEACHER_PRIMARY_LESSON_TITLE;
 
 function lessonsForDay(
   grade: number,
@@ -160,31 +166,31 @@ function lessonsForDay(
       homeworkNext: "Упр. 202",
     },
     {
-      title: "Алгебра",
+      title: "Информатика",
       timeLabel: "2-й урок (09:25 - 10:05)",
       grade: rnd(3, 5),
-      teacher: "Сидорова А.П.",
-      topic: "Функции",
-      homework: "№ 301–303",
+      teacher: TEACHER_PROFILE.name,
+      topic: "Алгоритмы и исполнители",
+      homework: "№ 5–7 практикум",
       controlWork: null,
       place: "Каб. 18",
-      homeworkNext: "№ 304",
+      homeworkNext: "Подготовка к лабораторной",
     },
     {
-      title: "Химия",
+      title: "Математика",
       timeLabel: "3-й урок (10:20 - 11:00)",
       grade: rnd(4, 5),
       teacher: TEACHER_PROFILE.name,
       topic:
         grade >= 10
-          ? "Органические соединения"
+          ? "Производная"
           : grade === 9
-            ? "Растворы"
-            : "Окислительно-восстановительные реакции",
-      homework: grade >= 11 ? "§ 45–46, задачи 1–3" : "§ 32, упр. 5",
-      controlWork: iso.endsWith("25") ? "5 (лабораторная)" : null,
-      place: "Каб. химии",
-      homeworkNext: "Подготовка к лабораторной",
+            ? "Квадратные уравнения"
+            : "Дроби",
+      homework: grade >= 11 ? "№ 401–403" : "№ 120–122",
+      controlWork: iso.endsWith("25") ? "Самостоятельная работа" : null,
+      place: "Каб. 15",
+      homeworkNext: "Повторение",
     },
     {
       title: "История",

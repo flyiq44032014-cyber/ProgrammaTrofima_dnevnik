@@ -1,4 +1,4 @@
-?<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
@@ -19,10 +19,11 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <title>Электронный дневник</title>
-    <link rel="stylesheet" href="/css/app.css?v=1.2.12" />
+    <link rel="stylesheet" href="/css/app.css?v=1.3.14" />
   </head>
   <body>
     <div id="app-announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="app-status-toast" class="app-status-toast" role="alert" aria-live="assertive" hidden></div>
     <div class="app-bg" aria-hidden="true"></div>
 
     <div id="shell-landing" class="shell-landing">
@@ -102,7 +103,9 @@
       <div class="picker__backdrop"></div>
       <div class="picker__sheet" role="dialog" aria-labelledby="picker-title">
         <div class="picker__title" id="picker-title">Кто учится?</div>
-        <ul id="picker-list" class="picker__list"></ul>
+        <div class="picker__scroll">
+          <ul id="picker-list" class="picker__list"></ul>
+        </div>
         <button type="button" class="picker__close" id="picker-close">Отмена</button>
       </div>
     </div>
@@ -115,6 +118,13 @@
         </button>
       </div>
       <div class="topbar__right-cluster">
+        <div class="topbar__subject-wrap" id="teacher-subject-wrap" hidden>
+          <span class="topbar__ctrl-hint" aria-hidden="true">&#8203;</span>
+          <label class="topbar__subject-label"
+            >Предмет
+            <select id="teacher-subject-select" class="topbar__subject-select" aria-label="Текущий предмет учителя"></select>
+          </label>
+        </div>
         <div class="topbar__profile-wrap">
           <span class="topbar__ctrl-hint" aria-hidden="true">&#8203;</span>
           <button type="button" class="btn-profile" id="open-profile">Профиль</button>
@@ -134,12 +144,12 @@
           </button>
           <div class="card card--paper diary-card" id="diary-card">
             <div class="card-head">
-              <div class="cal-ico" aria-hidden="true">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <button type="button" class="cal-ico cal-ico--btn p-cal-open" aria-label="Открыть календарь">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <rect x="3" y="5" width="18" height="16" rx="2" stroke="white" stroke-width="1.6" />
                   <path d="M8 3v4M16 3v4M3 11h18" stroke="white" stroke-width="1.6" />
                 </svg>
-              </div>
+              </button>
               <div class="date-ribbon" id="diary-date-banner">
                 <span class="date-ribbon__num" id="diary-day-num">—</span>
                 <div class="date-ribbon__rest">
@@ -162,17 +172,17 @@
       <section id="view-performance" class="view view--hidden" data-view="performance">
         <div id="perf-chart" class="card card--paper">
           <div class="card-head">
-            <div class="cal-ico" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <button type="button" class="cal-ico cal-ico--btn p-cal-open" aria-label="Открыть календарь">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <rect x="3" y="5" width="18" height="16" rx="2" stroke="white" stroke-width="1.6" />
                 <path d="M8 3v4M16 3v4M3 11h18" stroke="white" stroke-width="1.6" />
               </svg>
-            </div>
+            </button>
             <div class="date-ribbon date-ribbon--wide" id="perf-date-banner">
               <span class="date-ribbon__line" id="perf-date-line">—</span>
             </div>
           </div>
-          <div class="trimester" id="perf-trimester">—</div>
+          <div class="quarter" id="perf-quarter">—</div>
           <div class="legend">
             <span><i class="lg lg--stu"></i> ученик</span>
             <span><i class="lg lg--cls"></i> класс</span>
@@ -183,12 +193,12 @@
 
         <div id="perf-grades" class="card card--paper view--hidden">
           <div class="card-head">
-            <div class="cal-ico" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <button type="button" class="cal-ico cal-ico--btn p-cal-open" aria-label="Открыть календарь">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <rect x="3" y="5" width="18" height="16" rx="2" stroke="white" stroke-width="1.6" />
                 <path d="M8 3v4M16 3v4M3 11h18" stroke="white" stroke-width="1.6" />
               </svg>
-            </div>
+            </button>
             <div class="date-ribbon date-ribbon--wide">
               <span class="date-ribbon__line" id="grades-banner-date">—</span>
             </div>
@@ -202,12 +212,12 @@
       <section id="view-finals" class="view view--hidden" data-view="finals">
         <div class="card card--paper">
           <div class="card-head">
-            <div class="cal-ico" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <button type="button" class="cal-ico cal-ico--btn p-cal-open" aria-label="Открыть календарь">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <rect x="3" y="5" width="18" height="16" rx="2" stroke="white" stroke-width="1.6" />
                 <path d="M8 3v4M16 3v4M3 11h18" stroke="white" stroke-width="1.6" />
               </svg>
-            </div>
+            </button>
             <div class="date-ribbon date-ribbon--year" id="finals-year-ribbon">
               <span id="finals-year">—</span>
             </div>
@@ -215,7 +225,7 @@
           <div class="finals-head">
             <span class="finals-head__subj">Предмет</span>
             <div class="finals-head__tabs">
-              <span>1T</span><span>2T</span><span>3T</span><span>Г</span>
+              <span>1Ч</span><span>2Ч</span><span>3Ч</span><span>4Ч</span><span>Г</span>
             </div>
           </div>
           <div id="finals-rows" class="finals-rows"></div>
@@ -273,8 +283,8 @@
       <main class="main main--teacher">
         <div class="teacher-head card card--paper">
           <div class="teacher-head__title" id="teacher-profile">—</div>
-          <p class="teacher-head__hint">
-            Класс выбирается в шапке. На вкладке «Журнал» видны уроки: редактировать можно только химию. Таблица ниже — оценки и посещаемость на уроке химии за выбранный день.
+          <p class="teacher-head__hint" id="teacher-head-hint">
+            Класс выбирается в шапке. На вкладке «Журнал» — уроки выбранного предмета (переключатель рядом с «Профиль»). Редактирование — кнопка «Изменить» у урока. Таблица ниже — оценки и посещаемость за урок математики за выбранный день (для других предметов скрыта).
           </p>
         </div>
 
@@ -307,9 +317,9 @@
               </p>
               <div id="t-lessons" class="lessons lessons--teacher"></div>
               <div class="chem-table-block" id="chem-table-block">
-                <div class="chem-table-title">Химия: оценки и посещаемость за день</div>
+                <div class="chem-table-title" id="chem-table-title">Математика: оценки и посещаемость за день</div>
                 <div class="table-scroll">
-                  <table class="data-table" id="t-chem-table" aria-label="Ученики и оценки за урок химии">
+                  <table class="data-table" id="t-chem-table" aria-label="Ученики и оценки за урок математики">
                     <thead>
                       <tr>
                         <th>Фамилия Имя</th>
@@ -429,6 +439,23 @@
       </div>
     </div>
 
+    <div id="p-cal-modal" class="lesson-modal t-cal-modal" hidden>
+      <div class="lesson-modal__backdrop" id="p-cal-backdrop"></div>
+      <div class="lesson-modal__sheet t-cal-sheet" role="dialog" aria-modal="true" aria-labelledby="p-cal-title">
+        <div class="t-cal-head">
+          <button type="button" class="t-cal-navbtn" id="p-cal-prev" aria-label="Предыдущий месяц">‹</button>
+          <h2 class="lesson-modal__h t-cal-title" id="p-cal-title">—</h2>
+          <button type="button" class="t-cal-navbtn" id="p-cal-next" aria-label="Следующий месяц">›</button>
+        </div>
+        <p class="t-cal-hint">Суббота и воскресенье не выбираются. Доступны учебные дни из дневника ребёнка.</p>
+        <div class="t-cal-dow-row" aria-hidden="true">
+          <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span class="t-cal-dow--weekend">Сб</span><span class="t-cal-dow--weekend">Вс</span>
+        </div>
+        <div id="p-cal-grid" class="t-cal-grid"></div>
+        <button type="button" class="t-cal-close" id="p-cal-close">Закрыть</button>
+      </div>
+    </div>
+
     <div id="t-pupil-picker" class="picker picker--t-pupil" hidden>
       <div class="picker__backdrop" id="t-pupil-picker-backdrop"></div>
       <div class="picker__sheet picker__sheet--t-pupil" role="dialog" aria-label="Выбор ученика">
@@ -446,7 +473,7 @@
         <h2 class="lesson-modal__h" id="scm-title">Ученик</h2>
         <p id="scm-form-error" class="form-err" role="alert" hidden></p>
         <p class="scm-hint">
-          Оценка за урок химии и отметка об отсутствии (н). При пропуске оценка не ставится.
+          Оценка за урок математики и отметка об отсутствии (н). При пропуске оценка не ставится.
         </p>
         <label class="tm-field"
           >Оценка за урок
@@ -511,6 +538,39 @@
           </div>
         </div>
         <div id="profile-parent-section" class="profile-section" hidden>
+          <div id="profile-parent-contacts" class="profile-parent-contacts">
+            <div class="profile-contact-row">
+              <button type="button" class="profile-modal__add-btn profile-modal__add-btn--inline" id="prof-copy-email">
+                Копировать почту
+              </button>
+            </div>
+            <label class="profile-add__label" for="prof-phone"
+              >Телефон
+              <input
+                type="tel"
+                id="prof-phone"
+                class="profile-add__input"
+                inputmode="tel"
+                autocomplete="tel"
+                maxlength="40"
+                aria-describedby="prof-phone-hint"
+              />
+            </label>
+            <p id="prof-phone-hint" class="profile-hint">
+              Формат: +7 … или 8 …; допускаются пробелы, скобки и дефис (до 40 символов).
+            </p>
+            <p id="prof-phone-incomplete" class="profile-phone-incomplete" hidden>
+              Укажите телефон — школе будет проще с вами связаться.
+            </p>
+            <div class="profile-contact-row">
+              <button type="button" class="profile-modal__add-btn" id="prof-phone-save">
+                Сохранить телефон
+              </button>
+              <button type="button" class="profile-modal__add-btn profile-modal__add-btn--inline" id="prof-copy-phone">
+                Копировать телефон
+              </button>
+            </div>
+          </div>
           <h3 class="profile-section__title">Дети</h3>
           <ul id="profile-children-list" class="profile-list"></ul>
           <div class="profile-add">
@@ -554,6 +614,13 @@
             </label>
           </div>
           <button type="button" class="profile-modal__add-btn" id="prof-child-add">Добавить</button>
+          <div class="profile-add" style="margin-top:12px">
+            <label class="profile-add__label"
+              >Ключ привязки
+              <input type="text" id="prof-link-key" class="profile-add__input" placeholder="7 символов (буквы и цифры)" autocomplete="off" />
+            </label>
+          </div>
+          <button type="button" class="profile-modal__add-btn" id="prof-link-key-redeem">Привязать ребенка по ключу</button>
         </div>
         <div id="profile-teacher-section" class="profile-section" hidden>
           <h3 class="profile-section__title">Классы</h3>
@@ -638,12 +705,26 @@
               <select id="auth-role" name="role">
                 <option value="parent">Родитель</option>
                 <option value="teacher">Учитель</option>
+                <option value="director">Директор</option>
               </select>
             </label>
           </div>
-          <p id="auth-login-hints" class="auth-hints" hidden>
-            Демо-аккаунты доступны только для локального запуска или при открытии с
-            <code>?demo=1</code>.
+          <p id="auth-login-hints" class="auth-hints">
+            Демо-аккаунты (локальный запуск):
+            <br />
+            Директор — <code>director.demo@school.local</code>, пароль <code>DirectorDemo2026</code>
+            <br />
+            Учитель (Соколова Виктория Павловна, Литература) — <code>teacher.rus@school.local</code>, пароль <code>TeacherDemo2026</code>
+            <br />
+            Учитель (Лебедева Алёна Михайловна, История) — <code>teacher.math@school.local</code>, пароль <code>TeacherDemo2026</code>
+            <br />
+            Учитель (Мельникова Снежана Оскаровна, Химия) — <code>teacher.pool.45@school.local</code>, пароль <code>TeacherDemo2026</code>
+            <br />
+            Родитель (семья Кагосима) — <code>kagosima.parent@school.local</code>, пароль <code>FamilyParent2026</code>
+            <br />
+            Родитель (семья Мацумото) — <code>matsumoto.parent@school.local</code>, пароль <code>FamilyParent2026</code>
+            <br />
+            Родитель (семья Танака) — <code>tanaka.parent@school.local</code>, пароль <code>FamilyParent2026</code>
           </p>
           <p id="auth-error" class="auth-error" role="alert" hidden></p>
           <div class="auth-actions">
@@ -654,7 +735,445 @@
       </div>
     </div>
 
-    <script src="/js/app.js?v=1.2.12" defer></script>
+    <div id="shell-director" class="shell-teacher view--hidden" hidden>
+      <main class="main main--teacher">
+        <section id="d-view-classes" class="t-view">
+          <div class="card card--paper">
+            <div class="chem-table-title">Классы</div>
+            <div class="d-class-tools">
+              <input type="text" id="d-class-search" placeholder="Поиск: 1А, 7В, 11Б" />
+              <select id="d-class-grade-filter">
+                <option value="">Все параллели</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+                <option value="10">10</option><option value="11">11</option>
+              </select>
+              <select id="d-class-sort-by">
+                <option value="grade">Класс</option>
+                <option value="parallel">Параллель</option>
+                <option value="students">Кол-во учеников</option>
+              </select>
+              <button type="button" id="d-class-sort-dir" class="d-sort-dir-btn" aria-label="По возрастанию" title="По возрастанию">↑</button>
+            </div>
+            <div class="d-class-actions">
+              <button type="button" id="d-open-create-class" class="d-btn d-btn--green">
+                Создать класс
+              </button>
+              <button type="button" id="d-open-delete-class" class="d-btn d-btn--red">
+                Удалить класс
+              </button>
+            </div>
+            <div class="table-scroll" id="d-classes-scroll">
+              <table class="data-table" aria-label="Классы">
+                <thead>
+                  <tr>
+                    <th>Класс</th>
+                    <th>Параллель</th>
+                    <th>Кол-во учеников</th>
+                    <th>Классный руководитель</th>
+                  </tr>
+                </thead>
+                <tbody id="d-classes-tbody"></tbody>
+              </table>
+            </div>
+            <div class="chem-table-title" id="d-class-students-title" style="margin-top:12px">
+              Ученики класса —
+            </div>
+            <div id="d-class-students-toolbar" class="d-class-students-toolbar" hidden>
+              <input
+                type="text"
+                id="d-class-students-search"
+                class="d-class-students-search"
+                placeholder="Поиск: фамилия, ФИО"
+                aria-label="Поиск ученика"
+              />
+              <div class="d-class-students-toolbar__sort">
+                <span class="d-class-students-sort-hint">По фамилии</span>
+                <button
+                  type="button"
+                  id="d-class-students-sort-dir"
+                  class="d-sort-dir-btn"
+                  aria-label="По возрастанию по фамилии"
+                  title="По возрастанию"
+                >
+                  ↑
+                </button>
+              </div>
+              <button type="button" id="d-class-students-export-csv" class="d-btn d-btn--green">Экспорт CSV</button>
+            </div>
+            <div class="d-class-actions">
+              <button type="button" id="d-open-add-student" class="d-btn d-btn--green">Добавить ученика</button>
+              <button type="button" id="d-open-bulk-add-students" class="d-btn d-btn--green">Массово добавить</button>
+              <button type="button" id="d-open-remove-student" class="d-btn d-btn--red">Удалить ученика</button>
+            </div>
+            <div class="table-scroll" id="d-class-students-scroll">
+              <table class="data-table" aria-label="Ученики выбранного класса">
+                <thead>
+                  <tr>
+                    <th>№</th>
+                    <th>ФИО</th>
+                    <th>Ключ</th>
+                  </tr>
+                </thead>
+                <tbody id="d-class-students-tbody"></tbody>
+              </table>
+            </div>
+            <div class="chem-table-title" style="margin-top:12px">Последние действия</div>
+            <div class="table-scroll" id="d-audit-scroll">
+              <table class="data-table" aria-label="Последние действия">
+                <thead>
+                  <tr>
+                    <th>Время</th>
+                    <th>Действие</th>
+                    <th>Кто</th>
+                    <th>Детали</th>
+                  </tr>
+                </thead>
+                <tbody id="d-audit-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="d-view-parents" class="t-view view--hidden">
+          <div class="card card--paper">
+            <div class="chem-table-title">Родители</div>
+            <div class="d-parent-tools">
+              <div class="d-parent-tools__row">
+                <input
+                  type="text"
+                  id="d-parent-search"
+                  class="d-parent-tools__search"
+                  placeholder="Поиск: ФИО, email, ребенок"
+                />
+                <div class="d-parent-tools__filters">
+                  <select id="d-parent-sort-by" aria-label="Сортировка">
+                    <option value="name">ФИО</option>
+                    <option value="children">Кол-во детей</option>
+                  </select>
+                  <button
+                    type="button"
+                    id="d-parent-sort-dir"
+                    class="d-sort-dir-btn"
+                    aria-label="По возрастанию"
+                    title="По возрастанию"
+                  >
+                    ↑
+                  </button>
+                </div>
+              </div>
+              <button type="button" id="d-parents-export-csv" class="d-btn d-btn--green">Экспорт CSV</button>
+            </div>
+            <div class="table-scroll" id="d-parents-scroll">
+              <table class="data-table" aria-label="Родители">
+                <thead>
+                  <tr>
+                    <th>ФИО</th>
+                    <th>Email</th>
+                    <th>Дети</th>
+                  </tr>
+                </thead>
+                <tbody id="d-parents-tbody"></tbody>
+              </table>
+            </div>
+            <div id="d-parents-meta" class="d-list-meta">Показано 0 из 0</div>
+            <button type="button" id="d-parents-load-more" class="d-btn d-btn--green d-btn--ghost" hidden>
+              Показать ещё
+            </button>
+            <button type="button" id="d-parents-scroll-top" class="d-btn d-btn--green d-btn--ghost" hidden>Наверх</button>
+          </div>
+        </section>
+
+        <section id="d-view-teachers" class="t-view view--hidden">
+          <div class="card card--paper">
+            <div class="chem-table-title">Учителя</div>
+            <div class="d-parent-tools">
+              <div class="d-parent-tools__row">
+                <input
+                  type="text"
+                  id="d-teachers-search"
+                  class="d-parent-tools__search"
+                  placeholder="Поиск: ФИО, email, предмет"
+                />
+                <div class="d-parent-tools__filters">
+                  <select id="d-teachers-sort-by" aria-label="Сортировка">
+                    <option value="name">ФИО</option>
+                  </select>
+                  <button
+                    type="button"
+                    id="d-teachers-sort-dir"
+                    class="d-sort-dir-btn"
+                    aria-label="По возрастанию"
+                    title="По возрастанию"
+                  >
+                    ↑
+                  </button>
+                </div>
+              </div>
+              <button type="button" id="d-teachers-export-csv" class="d-btn d-btn--green">Экспорт CSV</button>
+            </div>
+            <div class="table-scroll" id="d-teachers-scroll">
+              <table class="data-table" aria-label="Учителя">
+                <thead>
+                  <tr>
+                    <th>ФИО</th>
+                    <th>Email</th>
+                    <th>Предметы</th>
+                  </tr>
+                </thead>
+                <tbody id="d-teachers-tbody"></tbody>
+              </table>
+            </div>
+            <div id="d-teachers-meta" class="d-list-meta">Показано 0 из 0</div>
+            <button type="button" id="d-teachers-load-more" class="d-btn d-btn--green d-btn--ghost" hidden>
+              Показать ещё
+            </button>
+            <button type="button" id="d-teachers-scroll-top" class="d-btn d-btn--green d-btn--ghost" hidden>Наверх</button>
+          </div>
+        </section>
+
+        <section id="d-view-schedule" class="t-view view--hidden">
+          <div class="card card--paper">
+            <div class="chem-table-title">Расписание</div>
+            <div class="d-schedule-tools">
+              <input
+                type="text"
+                id="d-schedule-class-search"
+                placeholder="Поиск класса: 1А, 7В, 11Б"
+                aria-label="Поиск класса для расписания"
+              />
+              <div class="d-schedule-tools__filters">
+                <select id="d-schedule-grade-filter" aria-label="Фильтр по параллели">
+                  <option value="">Все параллели</option>
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                  <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                  <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+                  <option value="10">10</option><option value="11">11</option>
+                </select>
+                <select id="d-schedule-class"></select>
+                <button type="button" id="d-schedule-load" class="d-btn d-btn--green">Показать</button>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="data-table" aria-label="Расписание четверти">
+                <thead>
+                  <tr>
+                    <th>День</th>
+                    <th>Урок</th>
+                    <th>Предмет</th>
+                    <th>Время</th>
+                    <th>Учитель</th>
+                    <th>Кабинет</th>
+                  </tr>
+                </thead>
+                <tbody id="d-schedule-tbody"></tbody>
+              </table>
+            </div>
+            <div id="d-schedule-meta" class="d-list-meta">Выберите класс</div>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottomnav bottomnav--teacher" id="director-bottomnav" aria-label="Разделы директора" hidden>
+        <button type="button" class="bn-item is-active" data-director-tab="classes">
+          <span class="bn-ico" aria-hidden="true"
+            ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-diary" /></svg
+          ></span>
+          <span>Классы</span>
+        </button>
+        <button type="button" class="bn-item" data-director-tab="parents">
+          <span class="bn-ico" aria-hidden="true"
+            ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-chart" /></svg
+          ></span>
+          <span>Родители</span>
+        </button>
+        <button type="button" class="bn-item" data-director-tab="teachers">
+          <span class="bn-ico" aria-hidden="true"
+            ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-people" /></svg
+          ></span>
+          <span>Учителя</span>
+        </button>
+        <button type="button" class="bn-item" data-director-tab="schedule">
+          <span class="bn-ico" aria-hidden="true"
+            ><svg class="bn-ico-svg" width="22" height="22"><use href="#bn-icon-list" /></svg
+          ></span>
+          <span>Расписание</span>
+        </button>
+      </nav>
+    </div>
+
+    <div id="d-create-class-modal" class="lesson-modal" hidden>
+      <div class="lesson-modal__backdrop" id="d-create-class-backdrop"></div>
+      <div class="lesson-modal__sheet" role="dialog" aria-labelledby="d-create-class-title">
+        <h2 class="lesson-modal__h" id="d-create-class-title">Создать класс</h2>
+        <label class="tm-field"
+          >Класс
+          <select id="d-create-grade">
+            <option value="">Выберите</option>
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+            <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+            <option value="10">10</option><option value="11">11</option>
+          </select>
+        </label>
+        <label class="tm-field"
+          >Параллель
+          <select id="d-create-parallel">
+            <option value="">Выберите</option>
+            <option value="А">А</option>
+            <option value="Б">Б</option>
+            <option value="В">В</option>
+            <option value="Г">Г</option>
+          </select>
+        </label>
+        <p id="d-create-class-error" class="form-err" role="alert" hidden></p>
+        <div class="lesson-modal__actions">
+          <button type="button" class="btn-cancel" id="d-create-class-cancel">Отмена</button>
+          <button type="button" class="btn-save d-btn--green" id="d-create-class-save">Создать класс</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="d-delete-class-modal" class="lesson-modal" hidden>
+      <div class="lesson-modal__backdrop" id="d-delete-class-backdrop"></div>
+      <div class="lesson-modal__sheet" role="dialog" aria-labelledby="d-delete-class-title">
+        <h2 class="lesson-modal__h" id="d-delete-class-title">Удалить класс</h2>
+        <label class="tm-field"
+          >Класс
+          <select id="d-delete-grade">
+            <option value="">Выберите</option>
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+            <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+            <option value="10">10</option><option value="11">11</option>
+          </select>
+        </label>
+        <label class="tm-field"
+          >Параллель
+          <select id="d-delete-parallel">
+            <option value="">Выберите</option>
+            <option value="А">А</option>
+            <option value="Б">Б</option>
+            <option value="В">В</option>
+            <option value="Г">Г</option>
+          </select>
+        </label>
+        <label class="tm-field"
+          >Режим
+          <select id="d-delete-mode">
+            <option value="move">Перенести учеников в другой класс</option>
+            <option value="delete">Удалить вместе с учениками</option>
+          </select>
+        </label>
+        <label class="tm-field" id="d-delete-target-wrap"
+          >Целевой класс
+          <select id="d-delete-target-class"></select>
+        </label>
+        <div class="lesson-modal__actions">
+          <button type="button" class="btn-cancel" id="d-delete-class-cancel">Отмена</button>
+          <button type="button" class="btn-save d-btn--red" id="d-delete-class-save">Удалить</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="d-add-student-modal" class="lesson-modal" hidden>
+      <div class="lesson-modal__backdrop" id="d-add-student-backdrop"></div>
+      <div class="lesson-modal__sheet" role="dialog" aria-labelledby="d-add-student-title">
+        <h2 class="lesson-modal__h" id="d-add-student-title">Добавить ученика</h2>
+        <label class="tm-field"
+          >Фамилия
+          <input type="text" id="d-add-student-last-name" />
+        </label>
+        <label class="tm-field"
+          >Имя
+          <input type="text" id="d-add-student-first-name" />
+        </label>
+        <label class="tm-field"
+          >Отчество
+          <input type="text" id="d-add-student-patronymic" />
+        </label>
+        <div class="lesson-modal__actions">
+          <button type="button" class="btn-cancel" id="d-add-student-cancel">Отмена</button>
+          <button type="button" class="btn-save d-btn--green" id="d-add-student-save">Добавить</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="d-remove-student-modal" class="lesson-modal" hidden>
+      <div class="lesson-modal__backdrop" id="d-remove-student-backdrop"></div>
+      <div class="lesson-modal__sheet" role="dialog" aria-labelledby="d-remove-student-title">
+        <h2 class="lesson-modal__h" id="d-remove-student-title">Удалить ученика</h2>
+        <label class="tm-field"
+          >Ученик
+          <select id="d-remove-student-select"></select>
+        </label>
+        <div class="lesson-modal__actions">
+          <button type="button" class="btn-cancel" id="d-remove-student-cancel">Отмена</button>
+          <button type="button" class="btn-save d-btn--red" id="d-remove-student-save">Удалить</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="d-bulk-add-students-modal" class="lesson-modal" hidden>
+      <div class="lesson-modal__backdrop" id="d-bulk-add-students-backdrop"></div>
+      <div class="lesson-modal__sheet" role="dialog" aria-labelledby="d-bulk-add-students-title">
+        <h2 class="lesson-modal__h" id="d-bulk-add-students-title">Массово добавить учеников</h2>
+        <p class="tm-quarter-hint">
+          Формат: одна строка = один ученик, минимум 3 слова (`Фамилия Имя Отчество`).
+        </p>
+        <label class="tm-field"
+          >Список учеников
+          <textarea id="d-bulk-students-input" rows="8" placeholder="Иванов Иван Иванович"></textarea>
+        </label>
+        <div class="lesson-modal__actions">
+          <button type="button" class="btn-cancel" id="d-bulk-students-cancel">Отмена</button>
+          <button type="button" class="btn-cancel" id="d-bulk-students-validate">Проверить</button>
+          <button type="button" class="btn-save d-btn--green" id="d-bulk-students-save">Добавить</button>
+        </div>
+        <div id="d-bulk-students-preview" class="d-bulk-preview"></div>
+      </div>
+    </div>
+
+    <div id="d-parent-profile-modal" class="lesson-modal lesson-modal--director" hidden>
+      <div class="lesson-modal__backdrop" id="d-parent-profile-backdrop"></div>
+      <div class="lesson-modal__sheet" role="dialog" aria-labelledby="d-parent-profile-title">
+        <h2 class="lesson-modal__h" id="d-parent-profile-title">Профиль родителя</h2>
+        <div class="d-parent-profile">
+          <img id="d-parent-profile-avatar" alt="Аватар родителя" />
+          <div class="d-parent-profile-info">
+            <div id="d-parent-profile-fio" class="d-parent-profile-fio"></div>
+            <div id="d-parent-profile-email" class="d-parent-profile-meta"></div>
+            <div id="d-parent-profile-phone" class="d-parent-profile-meta"></div>
+            <div class="d-parent-profile-actions">
+              <button type="button" class="d-btn d-btn--green d-btn--small" id="d-parent-profile-copy-email">
+                Копировать почту
+              </button>
+              <button type="button" class="d-btn d-btn--green d-btn--small" id="d-parent-profile-copy-phone">
+                Копировать телефон
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="chem-table-title" style="margin-top:10px">Дети</div>
+        <div class="table-scroll" style="max-height:220px;overflow-y:auto">
+          <table class="data-table" aria-label="Дети родителя">
+            <thead>
+              <tr>
+                <th>ФИО</th>
+                <th>Класс</th>
+              </tr>
+            </thead>
+            <tbody id="d-parent-profile-children"></tbody>
+          </table>
+        </div>
+        <div class="lesson-modal__actions">
+          <button type="button" class="btn-cancel" id="d-parent-profile-close">Закрыть</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/app.js?v=1.3.14" defer></script>
   </body>
 </html>
 

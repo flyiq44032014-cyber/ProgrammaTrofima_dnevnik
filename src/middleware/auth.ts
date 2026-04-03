@@ -31,3 +31,15 @@ export function requireTeacher(req: Request, res: Response, next: NextFunction):
   }
   next();
 }
+
+export function requireDirector(req: Request, res: Response, next: NextFunction): void {
+  if (!req.session?.uid) {
+    res.status(401).json({ error: "Требуется вход" });
+    return;
+  }
+  if (req.session.role !== "director") {
+    res.status(403).json({ error: "Доступ только для директора" });
+    return;
+  }
+  next();
+}

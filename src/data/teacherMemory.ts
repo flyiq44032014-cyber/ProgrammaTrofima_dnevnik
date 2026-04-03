@@ -7,6 +7,8 @@ import {
   schoolClassesMeta,
   TEACHER_WEEK_ISOS,
   CHEMISTRY_LESSON_TITLE,
+  DEMO_TEACHER_SUBJECTS,
+  TEACHER_PRIMARY_LESSON_TITLE,
 } from "./teacherSeedData";
 
 export type ChemStudentDay = {
@@ -102,7 +104,10 @@ export function resetTeacherMemory(): void {
 }
 
 export function memTeacherProfile() {
-  return TEACHER_PROFILE;
+  return {
+    ...TEACHER_PROFILE,
+    subjects: [...DEMO_TEACHER_SUBJECTS],
+  };
 }
 
 export function memListClasses() {
@@ -196,8 +201,8 @@ export function memPatchChemStudent(
   return true;
 }
 
-/** Текущая четверть учебного года (демо): 2 — идёт вторая; первая уже закрыта */
-export const DEMO_CURRENT_QUARTER = 2;
+/** Текущая четверть учебного года (демо): 4 — идет четвертая */
+export const DEMO_CURRENT_QUARTER = 4;
 
 export function memGetQuarterTable(classId: string, rosterArg?: string[]): {
   currentQuarter: number;
@@ -276,7 +281,7 @@ export function memGetStudentStats(
     chemistry: {
       average: chemAvg,
       grades: chemistryGrades,
-      label: "Химия",
+      label: TEACHER_PRIMARY_LESSON_TITLE,
     },
     subjects,
   };
@@ -291,8 +296,9 @@ export function memUpdateLesson(
   const day = diaries[classId]?.[isoDate];
   if (!day) return false;
   const les = day.lessons.find((l) => l.id === lessonKey);
-  if (!les || les.title !== CHEMISTRY_LESSON_TITLE) return false;
-  if (patch.title !== undefined && patch.title !== CHEMISTRY_LESSON_TITLE) return false;
+  const allowed = new Set<string>([...DEMO_TEACHER_SUBJECTS]);
+  if (!les || !allowed.has(les.title)) return false;
+  if (patch.title !== undefined && !allowed.has(String(patch.title))) return false;
   if (patch.title !== undefined) les.title = patch.title;
   if (patch.timeLabel !== undefined) les.timeLabel = patch.timeLabel;
   if (patch.teacher !== undefined) les.teacher = patch.teacher ?? undefined;

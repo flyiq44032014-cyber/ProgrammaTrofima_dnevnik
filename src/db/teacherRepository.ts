@@ -1,19 +1,53 @@
 import type { DiaryDay } from "../types";
-import { CHEMISTRY_LESSON_TITLE, TEACHER_PROFILE } from "../data/teacherSeedData";
+import { TEACHER_PROFILE } from "../data/teacherSeedData";
 import { rowToLesson } from "./lessonRow";
 import { getPool } from "./pool";
 
 export { TEACHER_PROFILE };
 
-export async function listSchoolClasses(): Promise<
-  { id: string; grade: number; label: string; subjectName: string }[]
-> {
+/** Четверть, с которой согласован `seedSimple` (таблица `director_quarter_schedule` + мартовские дневники). */
+export const SEED_SIMPLE_QUARTER = 4;
+
+export type SchoolClassRow = {
+  id: string;
+  grade: number;
+  label: string;
+  subjectName: string;
+};
+
+export async function listSchoolClasses(): Promise<SchoolClassRow[]> {
   const { rows } = await getPool().query<{
     id: string;
     grade: number;
     label: string;
     subject_name: string;
   }>(`SELECT id, grade, label, subject_name FROM school_classes ORDER BY grade`);
+  return rows.map((r) => ({
+    id: r.id,
+    grade: r.grade,
+    label: r.label,
+    subjectName: r.subject_name,
+  }));
+}
+
+/** Классы, где учитель указан в расписании директора (та же модель, что вкладка «Расписание»). */
+export async function listSchoolClassesForTeacher(
+  teacherUserId: number,
+  quarter: number
+): Promise<SchoolClassRow[]> {
+  const { rows } = await getPool().query<{
+    id: string;
+    grade: number;
+    label: string;
+    subject_name: string;
+  }>(
+    `SELECT DISTINCT sc.id, sc.grade, sc.label, sc.subject_name
+     FROM school_classes sc
+     INNER JOIN director_quarter_schedule d ON d.class_id = sc.id
+     WHERE d.quarter = $1 AND d.teacher_user_id = $2
+     ORDER BY sc.grade, sc.label`,
+    [quarter, teacherUserId]
+  );
   return rows.map((r) => ({
     id: r.id,
     grade: r.grade,
@@ -114,11 +148,10 @@ export async function updateClassLesson(
   const w1 = n;
   const w2 = n + 1;
   const w3 = n + 2;
-  const w4 = n + 3;
-  vals.push(classId, isoDate, lessonKey, CHEMISTRY_LESSON_TITLE);
+  vals.push(classId, isoDate, lessonKey);
   const q = `UPDATE class_diary_lessons SET ${fields.join(
     ", "
-  )} WHERE class_id = $${w1} AND date_iso = $${w2}::date AND lesson_key = $${w3} AND title = $${w4}`;
+  )} WHERE class_id = $${w1} AND date_iso = $${w2}::date AND lesson_key = $${w3}`;
   const r = await pool.query(q, vals);
   return (r.rowCount ?? 0) > 0;
 }

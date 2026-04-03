@@ -151,11 +151,11 @@ async function run(): Promise<void> {
       const finalsYear = snap.finalsByChild[childId]?.yearLabel ?? "2025/2026";
       await c.query(
         `INSERT INTO performance_meta (
-           child_id, trimester_label, date_label, day_num, weekday, month_genitive, year, finals_year_label
+           child_id, quarter_label, date_label, day_num, weekday, month_genitive, year, finals_year_label
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
           childId,
-          perf.trimesterLabel,
+          perf.quarterLabel,
           perf.dateLabel,
           perf.dayNum,
           perf.weekday,
@@ -219,14 +219,15 @@ async function run(): Promise<void> {
       for (let i = 0; i < finals.rows.length; i++) {
         const r = finals.rows[i];
         await c.query(
-          `INSERT INTO finals (child_id, subject, t1, t2, t3, year_grade, sort_order)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          `INSERT INTO finals (child_id, subject, t1, t2, t3, t4, year_grade, sort_order)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [
             childId,
             r.subject,
             r.t1 ?? null,
             r.t2 ?? null,
             r.t3 ?? null,
+            r.t4 ?? null,
             r.year ?? null,
             i,
           ]
@@ -239,7 +240,7 @@ async function run(): Promise<void> {
       await c.query(`DELETE FROM users`);
       await c.query(
         `INSERT INTO users (email, password_hash, role, last_name, first_name, patronymic)
-         VALUES ($1, $2, $3, $4, $5, $6), ($7, $8, $9, $10, $11, $12)`,
+         VALUES ($1, $2, $3, $4, $5, $6), ($7, $8, $9, $10, $11, $12), ($13, $14, $15, $16, $17, $18)`,
         [
           "roditel@yandex.ru",
           bcrypt.hashSync("1234", 10),
@@ -252,6 +253,12 @@ async function run(): Promise<void> {
           "teacher",
           "Демо",
           "Учитель",
+          "",
+          "director.demo@school.local",
+          bcrypt.hashSync("DirectorDemo2026", 10),
+          "director",
+          "Демо",
+          "Директор",
           "",
         ]
       );
