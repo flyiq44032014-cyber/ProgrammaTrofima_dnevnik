@@ -1069,16 +1069,6 @@
     const tabLogin = $("#auth-tab-login");
     const tabReg = $("#auth-tab-register");
     const reqRegIds = ["auth-last-name", "auth-first-name", "auth-patronymic"];
-    // Показываем демо-подсказки только локально или при явном включении параметром ?demo=1
-    const showDemoHints = (() => {
-      try {
-        const p = new URLSearchParams(location.search);
-        if (p.get("demo") === "1") return true;
-        return location.hostname === "localhost" || location.hostname === "127.0.0.1";
-      } catch {
-        return false;
-      }
-    })();
 
     if (mode === "register") {
       if (title) title.textContent = "Регистрация";
@@ -1096,20 +1086,16 @@
       if (submit) submit.textContent = "Войти";
       if (regExtra) regExtra.hidden = true;
       if (loginHints) {
-        loginHints.hidden = !showDemoHints;
-        if (showDemoHints) {
-          // Вставляем креды только для локального запуска / ?demo=1,
-          // чтобы они не светились в HTML исходнике на публичном деплое.
-          loginHints.innerHTML =
-            "<strong>Демо-аккаунты (для проверки):</strong><br />" +
-            "Директор — <code>director.demo@school.local</code>, пароль <code>DirectorDemo2026</code><br />" +
-            "Учитель (Соколова Виктория Павловна, Литература) — <code>teacher.rus@school.local</code>, пароль <code>TeacherDemo2026</code><br />" +
-            "Учитель (Лебедева Алёна Михайловна, История) — <code>teacher.math@school.local</code>, пароль <code>TeacherDemo2026</code><br />" +
-            "Учитель (Мельникова Снежана Оскаровна, Химия) — <code>teacher.pool.45@school.local</code>, пароль <code>TeacherDemo2026</code><br />" +
-            "Родитель (семья Кагосима) — <code>kagosima.parent@school.local</code>, пароль <code>FamilyParent2026</code><br />" +
-            "Родитель (семья Мацумото) — <code>matsumoto.parent@school.local</code>, пароль <code>FamilyParent2026</code><br />" +
-            "Родитель (семья Танака) — <code>tanaka.parent@school.local</code>, пароль <code>FamilyParent2026</code>";
-        }
+        loginHints.hidden = false;
+        loginHints.innerHTML =
+          "<strong>Демо-аккаунты (для проверки):</strong><br />" +
+          "Директор — <code>director.demo@school.local</code>, пароль <code>DirectorDemo2026</code><br />" +
+          "Учитель (Соколова Виктория Павловна, Литература) — <code>teacher.rus@school.local</code>, пароль <code>TeacherDemo2026</code><br />" +
+          "Учитель (Лебедева Алёна Михайловна, История) — <code>teacher.math@school.local</code>, пароль <code>TeacherDemo2026</code><br />" +
+          "Учитель (Мельникова Снежана Оскаровна, Химия) — <code>teacher.pool.45@school.local</code>, пароль <code>TeacherDemo2026</code><br />" +
+          "Родитель (семья Кагосима) — <code>kagosima.parent@school.local</code>, пароль <code>FamilyParent2026</code><br />" +
+          "Родитель (семья Мацумото) — <code>matsumoto.parent@school.local</code>, пароль <code>FamilyParent2026</code><br />" +
+          "Родитель (семья Танака) — <code>tanaka.parent@school.local</code>, пароль <code>FamilyParent2026</code>";
       }
       reqRegIds.forEach((id) => {
         const el = document.getElementById(id);
