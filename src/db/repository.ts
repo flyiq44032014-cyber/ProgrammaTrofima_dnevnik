@@ -10,7 +10,8 @@ import type {
 } from "../types";
 import { rowToLesson } from "./lessonRow";
 import { getPool, withPgRetry } from "./pool";
-import { getClassDiary, getClassDiaryDates } from "./teacherRepository";
+import { applyPerStudentGradesToClassDiaryDay } from "../lib/chemistryDayStudents";
+import { getClassDiary, getClassDiaryDates, getClassRoster } from "./teacherRepository";
 
 export async function getChildren(): Promise<Child[]> {
   return withPgRetry(async () => {
@@ -155,14 +156,23 @@ export async function childBelongsToParent(parentUserId: number, studentId: stri
 export async function getDiary(childId: string, isoDate: string): Promise<DiaryDay | null> {
   return withPgRetry(async () => {
     const pool = getPool();
-    const s = await pool.query<{ class_schedule_id: string | null }>(
-      `SELECT class_schedule_id FROM students WHERE id = $1`,
+    const s = await pool.query<{ class_schedule_id: string | null; name: string }>(
+      `SELECT class_schedule_id, name FROM students WHERE id = $1`,
       [childId]
     );
     if (s.rows.length === 0) return null;
     const scheduleId = s.rows[0].class_schedule_id;
     if (scheduleId) {
-      return getClassDiary(scheduleId, isoDate);
+      const day = await getClassDiary(scheduleId, isoDate);
+      if (!day) return null;
+      const roster = await getClassRoster(scheduleId);
+      return applyPerStudentGradesToClassDiaryDay({
+        day,
+        classId: scheduleId,
+        isoDate,
+        roster,
+        childDisplayName: s.rows[0].name,
+      });
     }
     const day = await pool.query<{
       date_iso: string;

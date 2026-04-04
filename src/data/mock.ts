@@ -7,10 +7,12 @@ import type {
   GradeDaySummary,
   PerformancePayload,
 } from "../types";
+import { applyPerStudentGradesToClassDiaryDay } from "../lib/chemistryDayStudents";
 import {
   memGetClassDiary,
   memGetClassDiaryDates,
   memGetMeeting,
+  memGetRoster,
 } from "./teacherMemory";
 
 const children: Child[] = [
@@ -1084,7 +1086,16 @@ export function getChildren(): Child[] {
 export function getDiary(childId: string, isoDate: string): DiaryDay | null {
   const ch = children.find((c) => c.id === childId);
   if (ch?.classScheduleId) {
-    return memGetClassDiary(ch.classScheduleId, isoDate);
+    const day = memGetClassDiary(ch.classScheduleId, isoDate);
+    if (!day) return null;
+    const roster = memGetRoster(ch.classScheduleId);
+    return applyPerStudentGradesToClassDiaryDay({
+      day,
+      classId: ch.classScheduleId,
+      isoDate,
+      roster,
+      childDisplayName: ch.name,
+    });
   }
   const byDate = diaryByChild[childId];
   if (!byDate) return null;
