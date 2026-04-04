@@ -13,6 +13,7 @@ import {
   updateClassLesson,
 } from "../db/teacherRepository";
 import * as directorRepo from "../db/directorRepository";
+import { buildChemistryDayStudentRows } from "../lib/chemistryDayStudents";
 
 type SessionWithTeacherSubject = {
   teacherActiveSubject?: string;
@@ -321,35 +322,14 @@ teacherRouter.get("/classes/:classId/chemistry-day/:isoDate", async (req, res) =
     }
     const baseGradeRaw = typeof lesson.grade === "number" ? Number(lesson.grade) : 4;
     const baseGrade = Number.isFinite(baseGradeRaw) ? baseGradeRaw : 4;
-    const hashStrLocal = (s: string): number => {
-      let h = 2166136261;
-      for (let i = 0; i < s.length; i += 1) {
-        h ^= s.charCodeAt(i);
-        h +=
-          (h << 1) +
-          (h << 4) +
-          (h << 7) +
-          (h << 8) +
-          (h << 24);
-      }
-      return Math.abs(h >>> 0);
-    };
-    const students = roster.map((fullName) => {
-      const key = `${classId}|${isoDate}|${lesson.id || lesson.order}|${fullName}`;
-      const h = hashStrLocal(key);
-      const absent = h % 10 === 0;
-      let lessonGrade: number | null = null;
-      if (!absent) {
-        const delta = (h % 3) - 1; // -1,0,+1
-        const g = Math.max(2, Math.min(5, baseGrade + delta));
-        lessonGrade = g;
-      }
-      return {
-        studentKey: fullName,
-        name: fullName,
-        lessonGrade,
-        absent,
-      };
+    const lessonSlotKey = String(lesson.id || lesson.order);
+    const students = buildChemistryDayStudentRows({
+      classId,
+      isoDate,
+      lessonSlotKey,
+      subjectTitle: active,
+      baseGrade,
+      roster,
     });
     res.json({
       classId,

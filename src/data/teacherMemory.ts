@@ -1,5 +1,6 @@
 import type { DiaryDay } from "../types";
 import type { LessonPatch } from "../db/teacherRepository";
+import { buildChemistryDayStudentRows } from "../lib/chemistryDayStudents";
 import {
   TEACHER_PROFILE,
   buildClassDiaries,
@@ -51,36 +52,25 @@ function seedChemAndQuarters(): void {
     quarterAvgsByClass[c.id] = {};
 
     for (const iso of TEACHER_WEEK_ISOS) {
-      const rnd = rngFor(c.id, iso, "chem");
-      const n = roster.length;
-      const aCount = Math.min(n, 2 + Math.floor(rnd() * 5));
-      const maxGrades = Math.min(n - aCount, 2 + Math.floor(rnd() * 4));
-      const absIdx = new Set<number>();
-      let tries = 0;
-      while (absIdx.size < aCount && n > 0 && tries < n * 20) {
-        tries++;
-        absIdx.add(Math.floor(rnd() * n));
-      }
-      const gradeIdx = new Set<number>();
-      tries = 0;
-      while (gradeIdx.size < maxGrades && n > 0 && tries < n * 40) {
-        tries++;
-        const i = Math.floor(rnd() * n);
-        if (!absIdx.has(i)) gradeIdx.add(i);
-      }
-
+      const day = diaries[c.id]?.[iso];
+      const chemLes = day?.lessons.find((l) => l.title === CHEMISTRY_LESSON_TITLE);
+      const lessonSlotKey = chemLes ? String(chemLes.id || chemLes.order) : "0";
+      const baseGradeRaw =
+        chemLes && typeof chemLes.grade === "number" ? Number(chemLes.grade) : 4;
+      const baseGrade = Number.isFinite(baseGradeRaw) ? baseGradeRaw : 4;
+      const built = buildChemistryDayStudentRows({
+        classId: c.id,
+        isoDate: iso,
+        lessonSlotKey,
+        subjectTitle: CHEMISTRY_LESSON_TITLE,
+        baseGrade,
+        roster,
+      });
       chemByClassDate[c.id][iso] = {};
-      roster.forEach((_, i) => {
-        const key = String(i);
-        const absent = absIdx.has(i);
-        const lessonGrade = absent
-          ? null
-          : gradeIdx.has(i)
-            ? ((2 + Math.floor(rnd() * 4)) as 2 | 3 | 4 | 5)
-            : null;
-        chemByClassDate[c.id][iso][key] = {
-          lessonGrade,
-          absent,
+      built.forEach((row, i) => {
+        chemByClassDate[c.id][iso][String(i)] = {
+          lessonGrade: row.lessonGrade != null ? (row.lessonGrade as 2 | 3 | 4 | 5) : null,
+          absent: row.absent,
         };
       });
     }
