@@ -29,6 +29,8 @@ body {
   min-height: 100%;
   color: var(--text);
   background: #c9d8f5;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 body {
@@ -232,11 +234,17 @@ body.auth-landing {
   justify-content: space-between;
   gap: 10px;
   min-height: 52px;
-  padding: 8px 14px calc(8px + env(safe-area-inset-top, 0));
+  width: 100%;
+  max-width: var(--app-column-max);
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+  padding: 8px 8px calc(8px + env(safe-area-inset-top, 0));
   padding-top: calc(8px + env(safe-area-inset-top, 0));
   background: linear-gradient(180deg, rgba(92, 42, 46, 0.98), rgba(70, 32, 36, 0.98));
   color: #fff;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  border-radius: 0 0 var(--radius) var(--radius);
 }
 
 .topbar__role {
@@ -579,6 +587,11 @@ body:not(.mode-teacher) .topbar__subject-wrap {
 
 .shell-app[hidden] {
   display: none !important;
+}
+
+.shell-app:not([hidden]) {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .auth-modal {
@@ -1026,6 +1039,9 @@ body:not(.mode-teacher) .topbar__subject-wrap {
   align-items: stretch;
   gap: 6px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .diary-nav-btn {
@@ -1959,6 +1975,13 @@ button.t-cal-cell--day.is-selected {
   min-height: calc(100vh - 52px);
   gap: 0;
   padding-bottom: calc(68px + env(safe-area-inset-bottom, 0));
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+#shell-director {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .shell-teacher.view--hidden {
@@ -1996,6 +2019,14 @@ button.t-cal-cell--day.is-selected {
   margin: 0 -4px;
 }
 
+#shell-app .table-scroll,
+#shell-teacher .table-scroll,
+#shell-director .table-scroll {
+  margin-left: 0;
+  margin-right: 0;
+  max-width: 100%;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -2028,24 +2059,157 @@ button.t-cal-cell--day.is-selected {
   background: #eef4ff;
 }
 
-/* Таблицы: не сжимать колонки на телефоне — горизонтальный скролл в .table-scroll */
+/* Таблицы: вписываются в колонку без горизонтального скролла страницы */
 #shell-app .table-scroll > .data-table,
 #shell-teacher .table-scroll > .data-table,
-#shell-director .table-scroll > .data-table {
-  min-width: max(100%, 28rem);
-}
-
-#d-view-schedule .table-scroll > .data-table {
-  min-width: max(100%, 40rem);
-}
-
+#shell-director .table-scroll > .data-table,
 .lesson-modal .table-scroll > .data-table {
-  min-width: max(100%, 22rem);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  table-layout: fixed;
 }
 
-#shell-parent .table-scroll > .data-table--quarters,
-#shell-teacher .table-scroll > .data-table--quarters {
-  min-width: max(100%, 34rem);
+#shell-app .table-scroll > .data-table th,
+#shell-app .table-scroll > .data-table td,
+#shell-teacher .table-scroll > .data-table th,
+#shell-teacher .table-scroll > .data-table td,
+#shell-director .table-scroll > .data-table th,
+#shell-director .table-scroll > .data-table td,
+.lesson-modal .table-scroll > .data-table th,
+.lesson-modal .table-scroll > .data-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Расписание директора: 6 колонок */
+#d-view-schedule .table-scroll > .data-table th:nth-child(1),
+#d-view-schedule .table-scroll > .data-table td:nth-child(1) {
+  width: 11%;
+}
+#d-view-schedule .table-scroll > .data-table th:nth-child(2),
+#d-view-schedule .table-scroll > .data-table td:nth-child(2) {
+  width: 7%;
+}
+#d-view-schedule .table-scroll > .data-table th:nth-child(3),
+#d-view-schedule .table-scroll > .data-table td:nth-child(3) {
+  width: 16%;
+}
+#d-view-schedule .table-scroll > .data-table th:nth-child(4),
+#d-view-schedule .table-scroll > .data-table td:nth-child(4) {
+  width: 11%;
+}
+#d-view-schedule .table-scroll > .data-table th:nth-child(5),
+#d-view-schedule .table-scroll > .data-table td:nth-child(5) {
+  width: 38%;
+}
+#d-view-schedule .table-scroll > .data-table th:nth-child(6),
+#d-view-schedule .table-scroll > .data-table td:nth-child(6) {
+  width: 17%;
+}
+
+/* Журнал учителя: оценки за день */
+#t-chem-table th:nth-child(1),
+#t-chem-table td:nth-child(1) {
+  width: 52%;
+}
+#t-chem-table th:nth-child(2),
+#t-chem-table td:nth-child(2) {
+  width: 18%;
+}
+#t-chem-table th:nth-child(3),
+#t-chem-table td:nth-child(3) {
+  width: 18%;
+}
+
+/* Классы директора */
+#d-classes-scroll .data-table th:nth-child(1),
+#d-classes-scroll .data-table td:nth-child(1) {
+  width: 14%;
+}
+#d-classes-scroll .data-table th:nth-child(2),
+#d-classes-scroll .data-table td:nth-child(2) {
+  width: 14%;
+}
+#d-classes-scroll .data-table th:nth-child(3),
+#d-classes-scroll .data-table td:nth-child(3) {
+  width: 16%;
+}
+#d-classes-scroll .data-table th:nth-child(4),
+#d-classes-scroll .data-table td:nth-child(4) {
+  width: 56%;
+}
+
+/* Ученики класса */
+#d-class-students-scroll .data-table th:nth-child(1),
+#d-class-students-scroll .data-table td:nth-child(1) {
+  width: 10%;
+}
+#d-class-students-scroll .data-table th:nth-child(2),
+#d-class-students-scroll .data-table td:nth-child(2) {
+  width: 58%;
+}
+#d-class-students-scroll .data-table th:nth-child(3),
+#d-class-students-scroll .data-table td:nth-child(3) {
+  width: 32%;
+}
+
+/* Аудит */
+#d-audit-scroll .data-table th:nth-child(1),
+#d-audit-scroll .data-table td:nth-child(1) {
+  width: 18%;
+}
+#d-audit-scroll .data-table th:nth-child(2),
+#d-audit-scroll .data-table td:nth-child(2) {
+  width: 22%;
+}
+#d-audit-scroll .data-table th:nth-child(3),
+#d-audit-scroll .data-table td:nth-child(3) {
+  width: 18%;
+}
+#d-audit-scroll .data-table th:nth-child(4),
+#d-audit-scroll .data-table td:nth-child(4) {
+  width: 42%;
+}
+
+/* Учителя (директор) */
+#d-teachers-scroll .data-table th:nth-child(1),
+#d-teachers-scroll .data-table td:nth-child(1) {
+  width: 28%;
+}
+#d-teachers-scroll .data-table th:nth-child(2),
+#d-teachers-scroll .data-table td:nth-child(2) {
+  width: 30%;
+}
+#d-teachers-scroll .data-table th:nth-child(3),
+#d-teachers-scroll .data-table td:nth-child(3) {
+  width: 42%;
+}
+
+#t-quarters-table.data-table th,
+#t-quarters-table.data-table td {
+  font-size: clamp(0.62rem, 2.6vw, 0.78rem);
+  padding: 5px 4px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 420px) {
+  #shell-app .table-scroll > .data-table,
+  #shell-teacher .table-scroll > .data-table,
+  #shell-director .table-scroll > .data-table,
+  .lesson-modal .table-scroll > .data-table {
+    font-size: clamp(0.64rem, 3.1vw, 0.82rem);
+  }
+
+  #shell-app .table-scroll > .data-table th,
+  #shell-app .table-scroll > .data-table td,
+  #shell-teacher .table-scroll > .data-table th,
+  #shell-teacher .table-scroll > .data-table td,
+  #shell-director .table-scroll > .data-table th,
+  #shell-director .table-scroll > .data-table td {
+    padding: 6px 5px;
+  }
 }
 
 #d-classes-scroll {
