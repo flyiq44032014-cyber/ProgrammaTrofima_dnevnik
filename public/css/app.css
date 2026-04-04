@@ -455,6 +455,69 @@ body:not(.mode-teacher) .topbar__subject-wrap {
   outline-offset: 2px;
 }
 
+@media (max-width: 520px) {
+  .topbar {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    column-gap: 8px;
+  }
+
+  .topbar__left {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .topbar__name {
+    font-size: 0.92rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .topbar__class {
+    font-size: 0.75rem;
+  }
+
+  .topbar__right-cluster {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: stretch;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .topbar__subject-wrap {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .topbar__subject-select {
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .topbar__profile-wrap,
+  .topbar__logout-wrap {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    max-width: 11rem;
+  }
+
+  .btn-profile,
+  .btn-logout {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 0.8rem;
+  }
+}
+
 .shell-landing {
   position: relative;
   z-index: 5;
@@ -1965,6 +2028,26 @@ button.t-cal-cell--day.is-selected {
   background: #eef4ff;
 }
 
+/* Таблицы: не сжимать колонки на телефоне — горизонтальный скролл в .table-scroll */
+#shell-app .table-scroll > .data-table,
+#shell-teacher .table-scroll > .data-table,
+#shell-director .table-scroll > .data-table {
+  min-width: max(100%, 28rem);
+}
+
+#d-view-schedule .table-scroll > .data-table {
+  min-width: max(100%, 40rem);
+}
+
+.lesson-modal .table-scroll > .data-table {
+  min-width: max(100%, 22rem);
+}
+
+#shell-parent .table-scroll > .data-table--quarters,
+#shell-teacher .table-scroll > .data-table--quarters {
+  min-width: max(100%, 34rem);
+}
+
 #d-classes-scroll {
   max-height: 360px;
   overflow-y: auto;
@@ -2025,7 +2108,7 @@ button.t-cal-cell--day.is-selected {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 #d-schedule-grade-filter {
@@ -2034,8 +2117,8 @@ button.t-cal-cell--day.is-selected {
 }
 
 #d-schedule-class {
-  min-width: 120px;
-  flex: 1;
+  min-width: min(100%, 140px);
+  flex: 1 1 160px;
 }
 
 #d-schedule-load {
@@ -2165,7 +2248,7 @@ button.t-cal-cell--day.is-selected {
 .d-class-students-toolbar {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin-bottom: 10px;
@@ -2271,6 +2354,51 @@ button.t-cal-cell--day.is-selected {
   white-space: pre-line;
   line-height: 1.45;
   word-break: break-word;
+}
+
+@media (max-width: 520px) {
+  #d-view-parents .data-table {
+    table-layout: auto;
+  }
+
+  #d-view-parents .data-table th:nth-child(1),
+  #d-view-parents .data-table td:nth-child(1),
+  #d-view-parents .data-table th:nth-child(2),
+  #d-view-parents .data-table td:nth-child(2),
+  #d-view-parents .data-table th:nth-child(3),
+  #d-view-parents .data-table td:nth-child(3) {
+    width: auto;
+    min-width: 7.5rem;
+  }
+
+  .d-parent-tools__row {
+    flex-wrap: wrap;
+  }
+
+  .d-parent-tools__search {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .d-parent-tools__filters {
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+  }
+
+  #d-schedule-load {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .d-class-students-toolbar {
+    align-items: stretch;
+  }
+
+  #d-class-students-export-csv {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+  }
 }
 
 .status-ok {
