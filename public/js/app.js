@@ -943,15 +943,19 @@
     const top = document.createElement("button");
     top.type = "button";
     top.className = "lesson__top";
+    const showChildGrade = !teacherEdit;
     top.innerHTML =
       '<div><div class="lesson__title"></div><div class="lesson__time"></div></div>' +
-      (lesson.grade != null
-        ? '<div class="lesson__grade"></div>'
-        : '<div class="lesson__grade" style="opacity:0">—</div>');
+      (showChildGrade
+        ? lesson.grade != null
+          ? '<div class="lesson__grade"></div>'
+          : '<div class="lesson__grade" style="opacity:0">—</div>'
+        : "");
     top.querySelector(".lesson__title").textContent = lesson.title;
     top.querySelector(".lesson__time").textContent = lesson.timeLabel;
-    if (lesson.grade != null) {
-      top.querySelector(".lesson__grade").textContent = String(lesson.grade);
+    if (showChildGrade && lesson.grade != null) {
+      const gEl = top.querySelector(".lesson__grade");
+      if (gEl) gEl.textContent = String(lesson.grade);
     }
 
     const body = document.createElement("div");
@@ -1271,55 +1275,6 @@
       });
   }
 
-  function submitProfileAddChild() {
-    setProfileError("");
-    const lastEl = $("#prof-child-last");
-    const firstEl = $("#prof-child-first");
-    const patEl = $("#prof-child-pat");
-    const gradeEl = $("#prof-child-grade");
-    const letterEl = $("#prof-child-letter");
-    const last = lastEl ? String(lastEl.value).trim() : "";
-    const first = firstEl ? String(firstEl.value).trim() : "";
-    const pat = patEl ? String(patEl.value).trim() : "";
-    const grade = gradeEl ? String(gradeEl.value).trim() : "";
-    const letter = letterEl ? String(letterEl.value).trim() : "";
-    const cls = grade && letter ? `${grade} ${letter}` : "";
-    if (!last || !first || !cls) {
-      setProfileError("Заполните фамилию, имя, параллель (1–11) и литеру класса (А–Г).");
-      return;
-    }
-    apiPost("/api/profile/children", {
-      lastName: last,
-      firstName: first,
-      patronymic: pat,
-      classLabel: cls,
-    })
-      .then((body) => {
-        const chList = $("#profile-children-list");
-        if (chList && body.child) {
-          const c = body.child;
-          const li = document.createElement("li");
-          const nm = [c.lastName, c.firstName, c.patronymic]
-            .map((x) => String(x || "").trim())
-            .filter(Boolean)
-            .join(" ");
-          li.textContent = nm;
-          const sub = document.createElement("span");
-          sub.className = "profile-list__sub";
-          sub.textContent = c.classLabel || "";
-          li.appendChild(sub);
-          chList.appendChild(li);
-        }
-        if (lastEl) lastEl.value = "";
-        if (firstEl) firstEl.value = "";
-        if (patEl) patEl.value = "";
-        if (gradeEl) gradeEl.value = "";
-        if (letterEl) letterEl.value = "";
-        void syncParentShellAfterChildrenChange();
-      })
-      .catch((err) => setProfileError(getApiErrorMessage(err)));
-  }
-
   function submitProfileRedeemLinkKey() {
     setProfileError("");
     const keyEl = $("#prof-link-key");
@@ -1336,46 +1291,6 @@
           renderProfileData(data);
           void syncParentShellAfterChildrenChange();
         });
-      })
-      .catch((err) => setProfileError(getApiErrorMessage(err)));
-  }
-
-  function submitProfileAddClass() {
-    setProfileError("");
-    const grEl = $("#prof-class-grade");
-    const letterEl = $("#prof-class-letter");
-    const gradeRaw = grEl ? String(grEl.value).trim() : "";
-    const letterRaw = letterEl ? String(letterEl.value).trim() : "";
-    if (!gradeRaw || !letterRaw) {
-      setProfileError("Выберите параллель и литера класса.");
-      return;
-    }
-
-    const gradeNum = Number(gradeRaw);
-    if (!Number.isFinite(gradeNum)) {
-      setProfileError("Параллель должна быть числом.");
-      return;
-    }
-
-    /** @type {Record<string, string | number>} */
-    const payload = { label: `${gradeNum} ${letterRaw}`, grade: gradeNum };
-    apiPost("/api/profile/classes", payload)
-      .then((body) => {
-        const clList = $("#profile-classes-list");
-        if (clList && body.class) {
-          const c = body.class;
-          const li = document.createElement("li");
-          li.textContent = c.label;
-          if (c.grade != null && c.grade !== "") {
-            const sub = document.createElement("span");
-            sub.className = "profile-list__sub";
-            sub.textContent = `Параллель: ${c.grade}`;
-            li.appendChild(sub);
-          }
-          clList.appendChild(li);
-        }
-        if (grEl) grEl.value = "";
-        if (letterEl) letterEl.value = "";
       })
       .catch((err) => setProfileError(getApiErrorMessage(err)));
   }
@@ -4353,12 +4268,8 @@
   if (profClose) profClose.addEventListener("click", () => closeProfileModal());
   const profBd = $("#profile-backdrop");
   if (profBd) profBd.addEventListener("click", () => closeProfileModal());
-  const profChAdd = $("#prof-child-add");
-  if (profChAdd) profChAdd.addEventListener("click", () => submitProfileAddChild());
   const profRedeem = $("#prof-link-key-redeem");
   if (profRedeem) profRedeem.addEventListener("click", () => submitProfileRedeemLinkKey());
-  const profClAdd = $("#prof-class-add");
-  if (profClAdd) profClAdd.addEventListener("click", () => submitProfileAddClass());
 
   const profPhoneSave = $("#prof-phone-save");
   if (profPhoneSave) {

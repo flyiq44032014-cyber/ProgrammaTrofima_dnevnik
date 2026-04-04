@@ -11,8 +11,6 @@ type MemClass = TeacherClassRow;
 const memChildren = new Map<number, MemChild[]>();
 const memClasses = new Map<number, MemClass[]>();
 const memParentPhone = new Map<number, string>();
-let memChildRowId = 1;
-let memClassRowId = 1;
 
 export interface ProfilePayload {
   email: string;
@@ -109,43 +107,4 @@ export async function getProfile(
     teacherClasses: role === "teacher" ? [...(memClasses.get(userId) ?? [])] : [],
   };
   return base;
-}
-
-export async function addParentChild(
-  userId: number,
-  body: { lastName: string; firstName: string; patronymic: string; classLabel: string }
-): Promise<ParentChildRow> {
-  if (DB_ENABLED) {
-    return repo.dbAddParentChild(userId, body);
-  }
-  const row: MemChild = {
-    id: memChildRowId++,
-    lastName: body.lastName.trim(),
-    firstName: body.firstName.trim(),
-    patronymic: body.patronymic.trim(),
-    classLabel: body.classLabel.trim(),
-    linkedStudentId: null,
-  };
-  const list = memChildren.get(userId) ?? [];
-  list.push(row);
-  memChildren.set(userId, list);
-  return row;
-}
-
-export async function addTeacherClass(
-  userId: number,
-  body: { label: string; grade: number | null }
-): Promise<TeacherClassRow> {
-  if (DB_ENABLED) {
-    return repo.dbAddTeacherProfileClass(userId, body);
-  }
-  const row: MemClass = {
-    id: memClassRowId++,
-    label: body.label.trim(),
-    grade: body.grade,
-  };
-  const list = memClasses.get(userId) ?? [];
-  list.push(row);
-  memClasses.set(userId, list);
-  return row;
 }

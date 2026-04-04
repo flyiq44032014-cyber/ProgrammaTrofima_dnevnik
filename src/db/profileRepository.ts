@@ -77,43 +77,6 @@ export async function dbListParentChildren(userId: number): Promise<ParentChildR
   }));
 }
 
-export async function dbAddParentChild(
-  userId: number,
-  body: { lastName: string; firstName: string; patronymic: string; classLabel: string }
-): Promise<ParentChildRow> {
-  const { rows } = await getPool().query<{
-    id: number;
-    last_name: string;
-    first_name: string;
-    patronymic: string;
-    class_label: string;
-  }>(
-    `WITH nx AS (
-       SELECT COALESCE(MAX(sort_order), -1) + 1 AS n FROM user_parent_children WHERE user_id = $1
-     )
-     INSERT INTO user_parent_children (user_id, last_name, first_name, patronymic, class_label, sort_order, student_id)
-     SELECT $1, $2, $3, $4, $5, nx.n, NULL FROM nx
-     RETURNING id, last_name, first_name, patronymic, class_label`,
-    [
-      userId,
-      body.lastName.trim(),
-      body.firstName.trim(),
-      body.patronymic.trim(),
-      body.classLabel.trim(),
-    ]
-  );
-  const r = rows[0];
-  if (!r) throw new Error("INSERT_CHILD_FAILED");
-  return {
-    id: r.id,
-    lastName: r.last_name,
-    firstName: r.first_name,
-    patronymic: r.patronymic || "",
-    classLabel: r.class_label,
-    linkedStudentId: null,
-  };
-}
-
 export async function dbListTeacherProfileClasses(userId: number): Promise<TeacherClassRow[]> {
   const { rows } = await getPool().query<{
     id: number;
@@ -128,22 +91,4 @@ export async function dbListTeacherProfileClasses(userId: number): Promise<Teach
     label: r.label,
     grade: r.grade,
   }));
-}
-
-export async function dbAddTeacherProfileClass(
-  userId: number,
-  body: { label: string; grade: number | null }
-): Promise<TeacherClassRow> {
-  const { rows } = await getPool().query<{ id: number; label: string; grade: number | null }>(
-    `WITH nx AS (
-       SELECT COALESCE(MAX(sort_order), -1) + 1 AS n FROM user_teacher_classes WHERE user_id = $1
-     )
-     INSERT INTO user_teacher_classes (user_id, label, grade, sort_order)
-     SELECT $1, $2, $3, nx.n FROM nx
-     RETURNING id, label, grade`,
-    [userId, body.label.trim(), body.grade]
-  );
-  const r = rows[0];
-  if (!r) throw new Error("INSERT_CLASS_FAILED");
-  return { id: r.id, label: r.label, grade: r.grade };
 }
