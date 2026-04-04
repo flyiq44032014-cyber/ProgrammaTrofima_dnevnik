@@ -7,3 +7,8 @@ dist/
 .vercel
 backups/
 scripts/migrate.env
+# Локальные дампы/чанки синхронизации — не коммитить (огромный объём)
+scripts/_sync_chunks/
+scripts/_full_plain*.sql
+scripts/_t_users*.sql
+ПУЛ.txt
