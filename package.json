@@ -20,6 +20,8 @@
     "db:backfill:finals-quarters": "npm run build && node dist/db/backfillFinalsQuarters.js",
     "db:activate:parents": "npm run build && node dist/db/activateParentAccounts.js",
     "db:activate:teachers": "npm run build && node dist/db/activateTeacherAccounts.js",
+    "db:full-copy": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pg-full-copy.ps1",
+    "db:copy-to-render": "node scripts/fullDbCopy.cjs",
     "test": "vitest run"
   },
   "engines": {

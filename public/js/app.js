@@ -1412,6 +1412,8 @@
     }
     if (app) app.hidden = true;
     document.body.classList.add("auth-landing");
+    /* shell-director и director-bottomnav вне #shell-app — без сброса роли остаются на экране после выхода */
+    applyRole("parent");
   }
 
   function showMainApp() {

@@ -107,8 +107,9 @@ app.use(
         return;
       }
       if (/\.js$/.test(filePath) || /\.css$/.test(filePath)) {
-        // index.html references app.js/app.css with `?v=...` so immutable caching is safe.
-        res.set("Cache-Control", "public, max-age=31536000, immutable");
+        // Без immutable/долгого max-age: иначе после деплоя часть браузеров долго держит старый JS/CSS
+        // (подсказки входа и т.п.), пока не откроют инкогнито.
+        res.set("Cache-Control", "no-cache, must-revalidate");
         return;
       }
       res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
