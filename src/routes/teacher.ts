@@ -1,5 +1,4 @@
 import { Router } from "express";
-import fs from "fs";
 import type { DiaryDay } from "../types";
 import { TEACHER_PRIMARY_LESSON_TITLE } from "../data/teacherSeedData";
 import * as mem from "../data/teacherMemory";
@@ -56,116 +55,27 @@ function gradesSheetAllowed(_activeSubject: string): boolean {
 
 export const teacherRouter = Router();
 
-const DB_ENABLED = Boolean(process.env.DATABASE_URL);
-
-// #region agent log
-function teacherDebugLog(
-  runId: string,
-  hypothesisId: string,
-  location: string,
-  message: string,
-  data: Record<string, unknown>
-): void {
-  try {
-    const payload = {
-      sessionId: "00b601",
-      runId,
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    };
-    fs.appendFileSync("debug-00b601.log", `${JSON.stringify(payload)}\n`, "utf8");
-  } catch {
-    // ignore logging errors
-  }
-}
-// #endregion agent log
-
 async function listClassesSafe(req: import("express").Request) {
-  if (!DB_ENABLED) return mem.memListClasses();
-  try {
-    const uid = req.session && typeof req.session.uid === "number" ? req.session.uid : null;
-    if (uid) {
-      const classes = await listSchoolClassesForTeacher(uid, SEED_SIMPLE_QUARTER);
-      teacherDebugLog(
-        "teacher-classes",
-        "H-teacher-classes-from-schedule",
-        "routes/teacher.ts:listClassesSafe",
-        "listSchoolClassesForTeacher result",
-        { uid, quarter: SEED_SIMPLE_QUARTER, count: classes.length }
-      );
-      return classes;
-    }
-    const all = await listSchoolClasses();
-    teacherDebugLog(
-      "teacher-classes",
-      "H-teacher-classes-fallback-all",
-      "routes/teacher.ts:listClassesSafe",
-      "listSchoolClasses fallback (no uid)",
-      { hasSession: Boolean(req.session), count: all.length }
-    );
-    return all;
-  } catch (e) {
-    console.warn("teacher: классы из памяти (БД недоступна)", e);
-    return mem.memListClasses();
+  const uid = req.session && typeof req.session.uid === "number" ? req.session.uid : null;
+  if (uid) {
+    return listSchoolClassesForTeacher(uid, SEED_SIMPLE_QUARTER);
   }
+  return listSchoolClasses();
 }
 
 async function rosterSafe(classId: string) {
-  if (!DB_ENABLED) return mem.memGetRoster(classId);
-  try {
-    const names = await getClassRoster(classId);
-    teacherDebugLog(
-      "teacher-roster",
-      "H-roster-from-db",
-      "routes/teacher.ts:rosterSafe",
-      "getClassRoster result",
-      { classId, count: names.length }
-    );
-    return names;
-  } catch (e) {
-    console.warn("teacher: список класса из памяти (БД недоступна)", e);
-    return mem.memGetRoster(classId);
-  }
+  return getClassRoster(classId);
 }
 
 async function diaryDaySafe(classId: string, isoDate: string) {
-  if (!DB_ENABLED) return mem.memGetClassDiary(classId, isoDate);
-  try {
-    const day = await getClassDiary(classId, isoDate);
-    teacherDebugLog(
-      "teacher-diary",
-      "H-diary-empty-or-not",
-      "routes/teacher.ts:diaryDaySafe",
-      "getClassDiary result",
-      { classId, isoDate, hasDay: Boolean(day), lessons: day ? day.lessons.length : 0 }
-    );
-    return day;
-  } catch (e) {
-    console.warn("teacher: день из памяти (БД недоступна)", e);
-    return mem.memGetClassDiary(classId, isoDate);
-  }
+  return getClassDiary(classId, isoDate);
 }
 
 async function diaryDatesSafe(classId: string) {
-  if (!DB_ENABLED) return mem.memGetClassDiaryDates(classId);
-  try {
-    return await getClassDiaryDates(classId);
-  } catch (e) {
-    console.warn("teacher: даты из памяти (БД недоступна)", e);
-    return mem.memGetClassDiaryDates(classId);
-  }
+  return getClassDiaryDates(classId);
 }
 
 async function subjectsForTeacherUserId(uid: number): Promise<string[]> {
-  if (!DB_ENABLED) {
-    const p = mem.memTeacherProfile();
-    return Array.isArray((p as { subjects?: string[] }).subjects)
-      ? (p as { subjects: string[] }).subjects
-      : [TEACHER_PRIMARY_LESSON_TITLE];
-  }
   let list = await directorRepo.listTeacherSubjectNames(uid);
   if (!list.length) {
     list = [TEACHER_PRIMARY_LESSON_TITLE];
@@ -175,20 +85,6 @@ async function subjectsForTeacherUserId(uid: number): Promise<string[]> {
 
 teacherRouter.get("/profile", async (req, res) => {
   const uid = req.session!.uid!;
-  if (!DB_ENABLED) {
-    const p = mem.memTeacherProfile();
-    const subjects =
-      (p as { subjects?: string[] }).subjects?.length
-        ? (p as { subjects: string[] }).subjects
-        : [p.subject];
-    const subject = ensureTeacherActiveSubject(getTeacherSession(req), subjects);
-    res.json({
-      name: p.name,
-      subject,
-      subjects,
-    });
-    return;
-  }
   try {
     const card = await directorRepo.getTeacherCardByUserId(uid);
     if (!card) {
@@ -197,13 +93,6 @@ teacherRouter.get("/profile", async (req, res) => {
     }
     const subjects = card.subjects.length ? card.subjects : [TEACHER_PRIMARY_LESSON_TITLE];
     const subject = ensureTeacherActiveSubject(getTeacherSession(req), subjects);
-    teacherDebugLog(
-      "teacher-profile",
-      "H-profile-subjects",
-      "routes/teacher.ts:GET /profile",
-      "teacher profile subjects",
-      { uid, fullName: card.fullName, subjects, active: subject }
-    );
     res.json({
       name: card.fullName || "Учитель",
       subject,
@@ -239,17 +128,6 @@ teacherRouter.patch("/active-subject", async (req, res) => {
 teacherRouter.get("/classes", async (req, res) => {
   try {
     const classes = await listClassesSafe(req);
-    teacherDebugLog(
-      "teacher-classes",
-      "H-teacher-classes-response",
-      "routes/teacher.ts:GET /classes",
-      "teacher classes response",
-      {
-        uid: req.session && typeof req.session.uid === "number" ? req.session.uid : null,
-        count: classes.length,
-        ids: classes.map((c) => c.id),
-      }
-    );
     res.json({ classes });
   } catch (e) {
     console.error(e);
@@ -493,17 +371,7 @@ teacherRouter.put(
 
     const keyDecoded = decodeURIComponent(lessonKey);
     try {
-      let ok = false;
-      if (DB_ENABLED) {
-        try {
-          ok = await updateClassLesson(classId, isoDate, keyDecoded, patch);
-        } catch (e) {
-          console.warn("teacher: сохранение в память (БД недоступна)", e);
-          ok = mem.memUpdateLesson(classId, isoDate, keyDecoded, patch);
-        }
-      } else {
-        ok = mem.memUpdateLesson(classId, isoDate, keyDecoded, patch);
-      }
+      const ok = await updateClassLesson(classId, isoDate, keyDecoded, patch);
       if (!ok) {
         res.status(404).json({ error: "Урок не найден" });
         return;

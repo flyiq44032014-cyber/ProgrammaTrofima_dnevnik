@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Архитектура сервера — электронный дневник</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #fff;
+      --text: #1a1a1a;
+      --muted: #5c6370;
+      --border: #e2e5eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      margin: 0;
+      padding: 1.5rem;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      max-width: 56rem;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    h1 { font-size: 1.75rem; margin-top: 0; }
+    h2 {
+      font-size: 1.15rem;
+      margin: 2rem 0 0.5rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 2px solid var(--border);
+    }
+    .lead { color: var(--muted); margin-bottom: 1.5rem; }
+    .figure {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1rem 0.5rem;
+      margin: 1rem 0 2rem;
+      overflow-x: auto;
+    }
+    .caption {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin: 0.75rem 0 0;
+      padding-top: 0.5rem;
+      border-top: 1px dashed var(--border);
+    }
+    .mermaid { text-align: center; }
+    footer {
+      margin-top: 3rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <h1>Архитектура сервера</h1>
+  <p class="lead">
+    Блок-схемы ниже показывают, <strong>куда попадает запрос</strong> и <strong>какие файлы</strong> за что отвечают.
+    Откройте этот файл в браузере (двойной щелчок или перетаскивание в Chrome/Edge).
+  </p>
+
+  <h2>Рисунок 1. Общий путь запроса</h2>
+  <div class="figure">
+    <div class="mermaid">
+flowchart LR
+  subgraph client["Клиент"]
+    B[Браузер]
+  end
+  subgraph express["Express app.ts"]
+    MW["Порядок: helmet → session → JSON → rate limit"]
+    R[Роутеры по URL]
+  end
+  subgraph logic["Логика данных"]
+    ST[data/store.ts]
+    DB[(PostgreSQL)]
+    MEM[mock + teacherMemory]
+  end
+  B --> MW --> R
+  R --> ST
+  ST -->|DATABASE_URL есть| DB
+  ST -->|нет| MEM
+    </div>
+    <p class="caption">
+      <strong>Подпись:</strong> Сначала запрос проходит через настройки безопасности и сессии в <code>app.ts</code>, затем попадает в нужный роут.
+      Данные для родителя почти всегда идут через <code>store.ts</code>, который выбирает БД или память.
+    </p>
+  </div>
+
+  <h2>Рисунок 2. Куда монтируются роутеры (важен порядок)</h2>
+  <div class="figure">
+    <div class="mermaid">
+flowchart TB
+  subgraph mounts["app.ts — префикс /api"]
+    direction TB
+    A1["/api/auth → authRouter"]
+    A2["/api/profile → profileRouter"]
+    A3["/api/parent → parentRouter"]
+    A4["/api/teacher → requireTeacher → teacherRouter"]
+    A5["/api/director → requireDirector → directorRouter"]
+    A6["/api → requireParent → apiRouter родитель"]
+  end
+  A1 --> A2 --> A3 --> A4 --> A5 --> A6
+    </div>
+    <p class="caption">
+      <strong>Подпись:</strong> Узкие пути (<code>auth</code>, <code>teacher</code>…) регистрируются <em>раньше</em>, чем общий <code>/api</code> для родителя.
+      Иначе родительский роутер перехватил бы чужие URL.
+    </p>
+  </div>
+
+  <h2>Рисунок 3. Вход в систему (слои)</h2>
+  <div class="figure">
+    <div class="mermaid">
+flowchart TB
+  subgraph http["HTTP"]
+    RT["routes/auth.ts"]
+  end
+  subgraph svc["Сервис"]
+    AS["auth/authService.ts<br/>bcrypt, нормализация email"]
+  end
+  subgraph data["Данные пользователя"]
+    AR["db/authRepository.ts<br/>таблица users"]
+    MD["auth/memDisplay.ts<br/>демо без БД"]
+  end
+  RT --> AS
+  AS -->|есть БД| AR
+  AS -->|нет DATABASE_URL| MD
+    </div>
+    <p class="caption">
+      <strong>Подпись:</strong> Роут только принимает запрос; <code>authService</code> — правила входа; в БД логин ищется в <code>authRepository</code>, не в общем <code>repository.ts</code>.
+    </p>
+  </div>
+
+  <h2>Рисунок 4. Родитель: дневник и дети</h2>
+  <div class="figure">
+    <div class="mermaid">
+flowchart LR
+  API["routes/api.ts"]
+  ST["data/store.ts"]
+  REP["db/repository.ts"]
+  MK["data/mock.ts"]
+  API --> ST
+  ST --> REP
+  ST --> MK
+  REP --> PG[(PostgreSQL<br/>diary_*, students…)]
+    </div>
+    <p class="caption">
+      <strong>Подпись:</strong> <code>api.ts</code> отвечает за URL. Реальные SQL-запросы дневника и детей — в <code>repository.ts</code>.
+      Оценки на карточке урока могут подстраиваться под ребёнка через <code>lib/chemistryDayStudents.ts</code> (внутри <code>getDiary</code>).
+    </p>
+  </div>
+
+  <h2>Рисунок 5. Учитель: БД или память</h2>
+  <div class="figure">
+    <div class="mermaid">
+flowchart TB
+  TR["routes/teacher.ts"]
+  TR -->|DATABASE_URL| TREP["db/teacherRepository.ts<br/>getClassDiary, roster…"]
+  TR -->|нет БД| TM["data/teacherMemory.ts"]
+  TREP --> PG2[(PostgreSQL<br/>class_diary_*, school_classes)]
+    </div>
+    <p class="caption">
+      <strong>Подпись:</strong> HTTP-контракт всегда в <code>teacher.ts</code>. Источник данных переключается: PostgreSQL или демо в RAM (<code>teacherMemory</code>).
+    </p>
+  </div>
+
+  <h2>Рисунок 6. База данных: файлы и роли</h2>
+  <div class="figure">
+    <div class="mermaid">
+flowchart TB
+  subgraph sql["Схема DDL"]
+    S1["schema.sql — базовая"]
+    S2["schema_teacher.sql — классный дневник"]
+  end
+  subgraph pool["Доступ"]
+    P["db/pool.ts → getPool()"]
+  end
+  subgraph repos["Репозитории запросов"]
+    R1["repository.ts — родитель"]
+    R2["teacherRepository.ts — класс"]
+    R3["authRepository.ts — users"]
+    R4["directorRepository.ts — директор"]
+    R5["profileRepository.ts — профиль"]
+  end
+  sql --> repos
+  P --> repos
+    </div>
+    <p class="caption">
+      <strong>Подпись:</strong> <code>.sql</code> — структура таблиц. <code>pool</code> — соединения. Каждый <code>*Repository.ts</code> — готовые запросы своей области.
+      <code>lessonRow.ts</code> превращает строку SQL в тип <code>DiaryLesson</code> из <code>types.ts</code>.
+    </p>
+  </div>
+
+  <h2>Рисунок 7. Старт процесса и статика</h2>
+  <div class="figure">
+    <div class="mermaid">
+flowchart TB
+  SV["server.ts"]
+  SV --> EC{{"ensureProfileDbCompatibility()<br/>db/ensureCompatibility.ts"}}
+  SV --> L["app.listen(PORT)"]
+  APP["app.ts"]
+  APP --> STC["express.static public/"]
+  APP --> SPA["GET * → index.html SPA"]
+  SV --> APP
+    </div>
+    <p class="caption">
+      <strong>Подпись:</strong> <code>server.ts</code> поднимает порт и при необходимости чинит колонки БД. Раздача сайта и SPA — внутри <code>app.ts</code>, не в <code>server.ts</code>.
+    </p>
+  </div>
+
+  <footer>
+    Проект: электронный дневник · исходники: <code>src/</code> · подробный список файлов: <code>docs/backend-files-opisanie.docx</code> (генерация: <code>npm run docs:backend-docx</code>)
+  </footer>
+
+  <!-- UMD-сборка: надёжнее при открытии файла с диска (file://) -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "neutral",
+      flowchart: { curve: "basis", padding: 12 },
+      securityLevel: "loose",
+    });
+  </script>
+</body>
+</html>

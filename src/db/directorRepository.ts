@@ -2,26 +2,6 @@ import { getPool } from "./pool";
 import { sqlUpcRowMatchesStudent } from "./repository";
 import type { PoolClient } from "pg";
 import { createHash, randomBytes } from "crypto";
-import fs from "fs";
-import path from "path";
-
-const DEBUG_LOG_PATH = path.join(process.cwd(), "debug-00b601.log");
-function debugWrite(hypothesisId: string, location: string, message: string, data: Record<string, unknown> = {}): void {
-  try {
-    const line = {
-      sessionId: "00b601",
-      runId: "dbg2",
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    };
-    fs.appendFileSync(DEBUG_LOG_PATH, `${JSON.stringify(line)}\n`, "utf8");
-  } catch {
-    // ignore debug logging failures
-  }
-}
 
 export type SchoolClassRow = {
   id: string;
@@ -351,52 +331,6 @@ export async function listClasses(): Promise<SchoolClassRow[]> {
        ON u.id = utc.user_id
      ORDER BY sc.grade, sc.label`
   );
-  // #region agent log
-  const nullCount = rows.filter((r) => !r.class_teacher_full_name).length;
-  const sampleNull = rows.find((r) => !r.class_teacher_full_name)?.id || null;
-  debugWrite(
-    "H3_homeroom_missing_or_join_mismatch",
-    "src/db/directorRepository.ts:listClasses",
-    "homeroom join coverage",
-    { returned: rows.length, nullCount, sampleNull }
-  );
-  if (sampleNull) {
-    const dbg = await getPool().query<{
-      sc_label: string;
-      sc_grade: number;
-      utc_labels: string[];
-      utc_user_ids: number[];
-    }>(
-      `SELECT
-         sc.label AS sc_label,
-         sc.grade AS sc_grade,
-         COALESCE(array_agg(utc.label ORDER BY utc.user_id)::text[], '{}') AS utc_labels,
-         COALESCE(array_agg(utc.user_id ORDER BY utc.user_id)::int[], '{}') AS utc_user_ids
-       FROM school_classes sc
-       LEFT JOIN user_teacher_classes utc
-         ON utc.grade = sc.grade
-       WHERE sc.id = $1
-       GROUP BY sc.label, sc.grade
-       LIMIT 1`,
-      [sampleNull]
-    );
-    const d0 = dbg.rows[0];
-    debugWrite(
-      "H3_homeroom_missing_or_join_mismatch",
-      "src/db/directorRepository.ts:listClasses",
-      "homeroom candidates by grade",
-      {
-        sampleClassId: sampleNull,
-        sc_label: d0?.sc_label ?? null,
-        sc_grade: d0?.sc_grade ?? null,
-        utcLabelsCount: Array.isArray(d0?.utc_labels) ? d0?.utc_labels.length : 0,
-        utcLabels: d0?.utc_labels ? d0.utc_labels.slice(0, 6) : [],
-        utcUserIdsCount: Array.isArray(d0?.utc_user_ids) ? d0?.utc_user_ids.length : 0,
-        utcUserIds: d0?.utc_user_ids ? d0.utc_user_ids.slice(0, 6) : [],
-      }
-    );
-  }
-  // #endregion
   return rows.map((r) => ({
     id: r.id,
     label: r.label,
@@ -1254,16 +1188,6 @@ export async function listTeachersWithSubjectsPaged(params: {
   }
   const teachers = [...map.values()];
   const nextOffset = offset + teachers.length;
-  // #region agent log
-  debugWrite("H1_teacher_server_pagination", "src/db/directorRepository.ts:listTeachersWithSubjectsPaged", "server pagination result", {
-    limit,
-    offset,
-    returnedTeachers: teachers.length,
-    total,
-    hasMore: nextOffset < total,
-    nextOffset,
-  });
-  // #endregion
   return {
     teachers,
     total,

@@ -6,21 +6,10 @@ import {
   type RegisterProfile,
   type UserRole,
 } from "../db/authRepository";
-import {
-  getMemUserByEmail,
-  memRegisterUser,
-  memUserToAuthRow,
-  seedMemoryUsers,
-} from "./memDisplay";
-
-const DB_ENABLED = Boolean(process.env.DATABASE_URL);
 
 export async function authFindByEmail(email: string): Promise<AuthUserRow | null> {
   const norm = email.trim().toLowerCase();
-  if (DB_ENABLED) return dbFindUserByEmail(norm);
-  seedMemoryUsers();
-  const m = getMemUserByEmail(norm);
-  return m ? memUserToAuthRow(m) : null;
+  return dbFindUserByEmail(norm);
 }
 
 export async function authVerifyPassword(plain: string, hash: string): Promise<boolean> {
@@ -28,11 +17,7 @@ export async function authVerifyPassword(plain: string, hash: string): Promise<b
 }
 
 function validateProfile(p: RegisterProfile): void {
-  if (
-    !p.lastName.trim() ||
-    !p.firstName.trim() ||
-    !p.patronymic.trim()
-  ) {
+  if (!p.lastName.trim() || !p.firstName.trim() || !p.patronymic.trim()) {
     throw new Error("INVALID_NAME");
   }
 }
@@ -52,13 +37,7 @@ export async function authCreateUser(
   }
   validateProfile(profile);
   const hash = await bcrypt.hash(passwordPlain, 10);
-  if (DB_ENABLED) {
-    const existing = await dbFindUserByEmail(norm);
-    if (existing) throw new Error("EMAIL_TAKEN");
-    return dbCreateUser(norm, hash, role, profile);
-  }
-  seedMemoryUsers();
-  if (getMemUserByEmail(norm)) throw new Error("EMAIL_TAKEN");
-  const u = memRegisterUser(norm, hash, role, profile);
-  return memUserToAuthRow(u);
+  const existing = await dbFindUserByEmail(norm);
+  if (existing) throw new Error("EMAIL_TAKEN");
+  return dbCreateUser(norm, hash, role, profile);
 }

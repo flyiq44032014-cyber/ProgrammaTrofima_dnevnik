@@ -4,6 +4,9 @@ dist/
 .env.*
 !.env.example
 *.log
+# Временные файлы MS Office (блокировка при открытом Word)
+~$*
+.$*
 .vercel
 backups/
 scripts/migrate.env
